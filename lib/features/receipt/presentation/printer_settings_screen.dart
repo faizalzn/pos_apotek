@@ -7,6 +7,7 @@ import '../../../core/widgets/common.dart';
 import '../../settings/data/settings_repository.dart';
 import '../data/printer_service.dart';
 import '../data/printer_settings.dart';
+import '../data/whatsapp_launcher.dart';
 import '../data/receipt_layout.dart';
 import '../data/receipt_service.dart';
 
@@ -298,6 +299,9 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
                           ),
                         ),
                       ],
+                      _header(context, 'WhatsApp'),
+                      const WhatsAppChoiceTile(),
+                      const SizedBox(height: 8),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
@@ -322,4 +326,56 @@ class _PrinterSettingsScreenState extends ConsumerState<PrinterSettingsScreen> {
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
     child: Text(text, style: Theme.of(context).textTheme.titleMedium),
   );
+}
+
+/// Pilihan WhatsApp untuk mengirim struk (bila WhatsApp & WA Business terpasang).
+class WhatsAppChoiceTile extends ConsumerStatefulWidget {
+  const WhatsAppChoiceTile({super.key});
+
+  @override
+  ConsumerState<WhatsAppChoiceTile> createState() => _WhatsAppChoiceTileState();
+}
+
+class _WhatsAppChoiceTileState extends ConsumerState<WhatsAppChoiceTile> {
+  WhatsAppApp? _choice;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(whatsAppLauncherProvider).preference().then((v) {
+      if (mounted) {
+        setState(() {
+          _choice = v;
+          _loaded = true;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DropdownButtonFormField<WhatsAppApp?>(
+        initialValue: _choice,
+        isExpanded: true,
+        decoration: const InputDecoration(
+          labelText: 'Kirim struk lewat',
+          helperText: 'Berlaku bila WhatsApp dan WhatsApp Business sama-sama terpasang',
+          helperMaxLines: 2,
+        ),
+        items: [
+          const DropdownMenuItem(value: null, child: Text('Tanya setiap kali')),
+          for (final a in WhatsAppApp.values)
+            DropdownMenuItem(value: a, child: Text(a.label)),
+        ],
+        onChanged: (v) {
+          setState(() => _choice = v);
+          ref.read(whatsAppLauncherProvider).setPreference(v);
+        },
+      ),
+    );
+  }
 }

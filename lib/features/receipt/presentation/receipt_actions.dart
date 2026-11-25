@@ -6,13 +6,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/widgets/common.dart';
 import '../../auth/application/session_controller.dart';
+import '../data/receipt_image.dart';
 import '../data/printer_service.dart';
 import '../data/printer_settings.dart';
 import '../data/receipt_service.dart';
+import '../data/whatsapp_launcher.dart';
 import 'printer_settings_screen.dart';
 
 /// Nomor HP Indonesia → format wa.me (62…). `null` bila tidak valid.
@@ -128,16 +129,84 @@ class _ReceiptActionsState extends ConsumerState<ReceiptActions> {
     setState(() => _busy = true);
     try {
       final text = await ref.read(receiptServiceProvider).text(widget.saleId);
-      final uri = Uri.https('wa.me', number.isEmpty ? '/' : '/$number', {
-        'text': text,
-      });
-      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launcher = ref.read(whatsAppLauncherProvider);
+      final installed = await launcher.installed();
+      WhatsAppApp? app;
+      if (installed.length == 1) {
+        app = installed.single;
+      } else if (installed.length > 1) {
+        final saved = await launcher.preference();
+        if (saved != null && installed.contains(saved)) {
+          app = saved;
+        } else {
+          if (!mounted) return;
+          app = await _chooseWhatsApp(installed);
+          if (app == null) return;
+        }
+      }
+      final opened = await launcher.open(app: app, number: number, text: text);
       if (!opened && mounted) {
         showMessage(context, 'WhatsApp tidak bisa dibuka', error: true);
+      }
+    } on Object catch (e) {
+      if (mounted) {
+        showMessage(context, 'WhatsApp tidak bisa dibuka: $e', error: true);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Dua WhatsApp terpasang → tanya mau kirim dari yang mana.
+  Future<WhatsAppApp?> _chooseWhatsApp(List<WhatsAppApp> apps) async {
+    var remember = false;
+    final app = await showDialog<WhatsAppApp>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Kirim lewat WhatsApp yang mana?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final a in apps) ...[
+                FilledButton.tonalIcon(
+                  key: Key('wa-${a.name}'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                  onPressed: () => Navigator.pop(context, a),
+                  icon: Icon(
+                    a == WhatsAppApp.business
+                        ? Icons.storefront_outlined
+                        : Icons.chat_outlined,
+                  ),
+                  label: Text(a.label),
+                ),
+                const SizedBox(height: 8),
+              ],
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: remember,
+                onChanged: (v) => setState(() => remember = v ?? false),
+                title: const Text('Ingat pilihan ini'),
+                subtitle: const Text('Bisa diubah di Pengaturan → Printer & Struk'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (app != null && remember) {
+      await ref.read(whatsAppLauncherProvider).setPreference(app);
+    }
+    return app;
   }
 
   /// '' = pilih kontak di WhatsApp; null = batal.
@@ -206,7 +275,9 @@ class _ReceiptActionsState extends ConsumerState<ReceiptActions> {
       if (asImage) {
         final page = await Printing.raster(pdf, dpi: 200).first;
         file = File('${dir.path}/struk_$number.png');
-        await file.writeAsBytes(await page.toPng());
+        await file.writeAsBytes(
+          receiptPngOnWhite(page.pixels, page.width, page.height),
+        );
       } else {
         file = File('${dir.path}/struk_$number.pdf');
         await file.writeAsBytes(pdf);

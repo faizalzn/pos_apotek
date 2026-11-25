@@ -13,6 +13,7 @@ import '../../products/presentation/stock_alerts_screen.dart';
 import '../../sales/presentation/cashier_screen.dart';
 import '../../sales/presentation/sales_history_screen.dart';
 import '../../settings/data/settings_repository.dart';
+import '../../products/data/product_models.dart';
 import '../../reports/presentation/reports_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../shift/data/shift_service.dart';
@@ -121,6 +122,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 const SliverToBoxAdapter(child: _ShiftStatus()),
+                const SliverToBoxAdapter(child: _StockAlertBanner()),
                 const SliverToBoxAdapter(child: _BackupReminder()),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -176,6 +178,46 @@ Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     }
   }
   ref.read(sessionProvider.notifier).signOut();
+}
+
+/// Peringatan stok habis/menipis & kedaluwarsa di beranda.
+class _StockAlertBanner extends ConsumerWidget {
+  const _StockAlertBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final products = ref.watch(productsProvider).value;
+    if (products == null) return const SizedBox.shrink();
+    final now = ref.watch(clockProvider)();
+    int count(ProductFilter f) => products.where((p) => f.matches(p, now)).length;
+    final parts = [
+      for (final (f, label) in [
+        (ProductFilter.outOfStock, 'habis'),
+        (ProductFilter.lowStock, 'stok menipis'),
+        (ProductFilter.expired, 'kedaluwarsa'),
+        (ProductFilter.nearExpiry, 'hampir ED'),
+      ])
+        if (count(f) case final n when n > 0) '$n $label',
+    ];
+    if (parts.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Card(
+        color: theme.colorScheme.tertiaryContainer,
+        child: ListTile(
+          key: const Key('stock-alert'),
+          leading: const Icon(Icons.warning_amber_rounded),
+          title: const Text('Obat perlu diperhatikan'),
+          subtitle: Text(parts.join(' · ')),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const StockAlertsScreen()),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Status shift di beranda.

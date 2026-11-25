@@ -16,9 +16,23 @@ import 'stock_in_screen.dart';
 import 'widgets/product_widgets.dart';
 
 const _baseUnitSuggestions = [
-  'Tablet', 'Kapsul', 'Kaplet', 'Botol', 'Tube', 'Sachet', 'Pcs', //
+  'Tablet', 'Kapsul', 'Kaplet', 'Pcs', 'Botol', 'Tube', 'Sachet', 'Pot', //
+  'Ampul', 'Vial', 'Pak', 'Lembar', 'Roll',
 ];
-const _packUnitSuggestions = ['Strip', 'Blister', 'Box', 'Dus', 'Lusin'];
+const _packUnitSuggestions = [
+  'Strip', 'Blister', 'Box', 'Dus', 'Pak', 'Lusin', 'Botol', 'Sachet', //
+];
+
+/// Pilihan cepat susunan satuan untuk produk baru.
+const _unitPresets = <(String, List<String>)>[
+  ('Tablet → Strip → Box', ['Tablet', 'Strip', 'Box']),
+  ('Kapsul → Strip → Box', ['Kapsul', 'Strip', 'Box']),
+  ('Kaplet → Strip → Box', ['Kaplet', 'Strip', 'Box']),
+  ('Sachet → Box', ['Sachet', 'Box']),
+  ('Botol', ['Botol']),
+  ('Tube', ['Tube']),
+  ('Pcs', ['Pcs']),
+];
 
 class _UnitRow {
   _UnitRow({
@@ -36,7 +50,11 @@ class _UnitRow {
 
   final String? id;
   final TextEditingController name;
+
+  /// Isi kemasan, dihitung dari kemasan sebelumnya (mis. 1 Box isi 10 Strip),
+  /// kecuali [relToBase] (data lama yang tidak habis dibagi).
   final TextEditingController multiplier;
+  bool relToBase = false;
   final TextEditingController price;
   final TextEditingController barcode;
 
@@ -66,6 +84,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _category = TextEditingController();
   final _categoryFocus = FocusNode();
   final _minStock = TextEditingController();
+
+  /// 0 = satuan terkecil, i = kemasan ke-i.
+  int _minStockUnit = 0;
+  List<String> _usedUnitNames = const [];
   DrugClass _drugClass = DrugClass.bebas;
   int? _nearExpiryDays;
   late final _UnitRow _base;
@@ -94,7 +116,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _category.text = p.category;
       _drugClass = p.drugClass;
       _nearExpiryDays = p.nearExpiryDays;
-      _minStock.text = p.minStock == 0 ? '' : '${p.minStock}';
+      if (p.minStock > 0) {
+        // Tampilkan dalam kemasan terbesar yang habis membagi.
+        var index = 0;
+        for (final (i, u) in e.units.indexed) {
+          if (p.minStock % u.multiplier == 0) index = i;
+        }
+        _minStockUnit = index;
+        _minStock.text = '${p.minStock ~/ e.units[index].multiplier}';
+      }
       _originalPhoto = _photo = p.photoFile;
       final base = e.baseUnit;
       _base = _UnitRow(
@@ -104,16 +134,20 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         price: base.sellPrice,
         barcode: base.barcode,
       );
+      var previous = 1;
       for (final u in e.units.skip(1)) {
+        final even = u.multiplier % previous == 0;
         _packs.add(
           _UnitRow(
-            id: u.id,
-            name: u.name,
-            multiplier: u.multiplier,
-            price: u.sellPrice,
-            barcode: u.barcode,
-          ),
+              id: u.id,
+              name: u.name,
+              multiplier: even ? u.multiplier ~/ previous : u.multiplier,
+              price: u.sellPrice,
+              barcode: u.barcode,
+            )
+            ..relToBase = !even,
         );
+        previous = u.multiplier;
       }
     }
     ref.read(photoStoreProvider.future).then((s) => _store = s);
@@ -125,6 +159,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     });
     ref.read(productRepositoryProvider).categories().then((c) {
       if (mounted) setState(() => _categories = c);
+    });
+    ref.read(productRepositoryProvider).unitNames().then((n) {
+      if (mounted) setState(() => _usedUnitNames = n);
     });
   }
 
@@ -214,12 +251,59 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     if (code != null) setState(() => controller.text = code);
   }
 
+  /// Isi tiap kemasan dalam satuan terkecil (0 bila belum diisi).
+  List<int> get _totals {
+    var previous = 1;
+    return [
+      for (final r in _packs)
+        previous = r.relToBase
+            ? parseNumber(r.multiplier.text)
+            : parseNumber(r.multiplier.text) * previous,
+    ];
+  }
+
+  String _unitName(int index) {
+    final row = index == 0 ? _base : _packs[index - 1];
+    final n = row.name.text.trim();
+    return n.isEmpty ? (index == 0 ? 'satuan terkecil' : 'kemasan') : n;
+  }
+
+  void _applyPreset(List<String> names) => setState(() {
+    _base.name.text = names.first;
+    for (final r in _packs) {
+      r.dispose();
+    }
+    _packs
+      ..clear()
+      ..addAll([for (final n in names.skip(1)) _UnitRow(name: n)]);
+    _minStockUnit = 0;
+  });
+
+  void _removePack(_UnitRow row) => setState(() {
+    final i = _packs.indexOf(row);
+    // Kemasan berikutnya dihitung dari kemasan ini → pindahkan isinya.
+    if (i + 1 < _packs.length) {
+      final next = _packs[i + 1];
+      if (!next.relToBase) {
+        final merged = parseNumber(next.multiplier.text) *
+            (row.relToBase ? 1 : parseNumber(row.multiplier.text));
+        if (row.relToBase) next.relToBase = true;
+        next.multiplier.text = merged == 0 ? '' : '$merged';
+      }
+    }
+    _packs.removeAt(i);
+    row.dispose();
+    if (_minStockUnit > _packs.length) _minStockUnit = 0;
+  });
+
   ProductInput _input() => ProductInput(
     name: _name.text,
     genericName: _generic.text,
     category: _category.text,
     drugClass: _drugClass,
-    minStock: parseNumber(_minStock.text),
+    minStock:
+        parseNumber(_minStock.text) *
+        (_minStockUnit == 0 ? 1 : _totals[_minStockUnit - 1]),
     nearExpiryDays: _nearExpiryDays,
     photoFile: _photo,
     units: [
@@ -230,11 +314,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         sellPrice: parseNumber(_base.price.text),
         barcode: _base.barcode.text,
       ),
-      for (final r in _packs)
+      for (final (i, r) in _packs.indexed)
         UnitInput(
           id: r.id,
           name: r.name.text,
-          multiplier: parseNumber(r.multiplier.text),
+          multiplier: _totals[i],
           sellPrice: parseNumber(r.price.text),
           barcode: r.barcode.text,
         ),
@@ -439,32 +523,95 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Mulai dari satuan terkecil yang bisa dijual eceran. '
-                      'Stok dihitung dalam satuan ini.',
+                      'Mulai dari satuan terkecil yang bisa dijual eceran, '
+                      'lalu kemasan yang lebih besar. Stok dihitung dalam '
+                      'satuan terkecil.',
                     ),
+                    if (!_isEdit) ...[
+                      const SizedBox(height: 12),
+                      Text('Pilihan cepat', style: theme.textTheme.titleSmall),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          for (final (label, names) in _unitPresets)
+                            ActionChip(
+                              label: Text(label),
+                              onPressed: () => _applyPreset(names),
+                            ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
-                    _unitCard(_base, isBase: true, baseName: baseName),
-                    for (final r in _packs)
-                      _unitCard(r, isBase: false, baseName: baseName),
+                    _unitCard(_base, index: 0, baseName: baseName),
+                    for (final (i, r) in _packs.indexed)
+                      _unitCard(r, index: i + 1, baseName: baseName),
                     const SizedBox(height: 4),
                     OutlinedButton.icon(
                       onPressed: () => setState(() => _packs.add(_UnitRow())),
                       icon: const Icon(Icons.add),
-                      label: const Text(
-                        'Tambah satuan kemasan (Strip, Box, ...)',
+                      label: Text(
+                        _packs.isEmpty
+                            ? 'Tambah kemasan (Strip, Box, ...)'
+                            : 'Tambah kemasan lebih besar',
                       ),
                     ),
                     const SizedBox(height: 28),
-                    TextFormField(
-                      controller: _minStock,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: InputDecoration(
-                        labelText: 'Peringatan stok menipis',
-                        hintText: 'Kosongkan bila tidak perlu',
-                        suffixText: baseName,
-                        helperText: 'Muncul peringatan bila stok sama atau kurang dari angka ini',
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            key: const Key('min-stock'),
+                            controller: _minStock,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              labelText: 'Peringatan stok menipis',
+                              hintText: 'Otomatis',
+                              helperText: _minStock.text.isNotEmpty
+                                  ? 'Diingatkan bila stok tinggal '
+                                        '${_minStock.text} ${_unitName(_minStockUnit)} '
+                                        'atau kurang'
+                                  : _packs.isEmpty
+                                  ? 'Kosong = hanya diingatkan saat habis'
+                                  : 'Kosong = otomatis, diingatkan bila kurang '
+                                        'dari 1 ${_unitName(1)}',
+                              helperMaxLines: 2,
+                            ),
+                          ),
+                        ),
+                        if (_packs.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 130,
+                            child: DropdownButtonFormField<int>(
+                              key: ValueKey('min-unit-${_packs.length}'),
+                              initialValue: _minStockUnit,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Satuan',
+                              ),
+                              items: [
+                                for (var i = 0; i <= _packs.length; i++)
+                                  DropdownMenuItem(
+                                    value: i,
+                                    child: Text(
+                                      _unitName(i),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _minStockUnit = v ?? 0),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int?>(
@@ -511,11 +658,21 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
   Widget _unitCard(
     _UnitRow row, {
-    required bool isBase,
+    required int index,
     required String baseName,
   }) {
     final theme = Theme.of(context);
-    final suggestions = isBase ? _baseUnitSuggestions : _packUnitSuggestions;
+    final isBase = index == 0;
+    final suggestions = {
+      ...(isBase ? _baseUnitSuggestions : _packUnitSuggestions),
+      ..._usedUnitNames,
+    }.toList();
+    final name = row.name.text.trim();
+    final previousName = isBase || row.relToBase
+        ? baseName
+        : _unitName(index - 1);
+    final total = isBase ? 1 : _totals[index - 1];
+    final basePrice = parseNumber(_base.price.text);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -527,17 +684,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    isBase ? 'Satuan terkecil' : 'Satuan kemasan',
+                    isBase ? 'Satuan terkecil (eceran)' : 'Kemasan',
                     style: theme.textTheme.titleSmall,
                   ),
                 ),
                 if (!isBase)
                   IconButton(
                     tooltip: 'Hapus satuan',
-                    onPressed: () => setState(() {
-                      _packs.remove(row);
-                      row.dispose();
-                    }),
+                    onPressed: () => _removePack(row),
                     icon: const Icon(Icons.close),
                   ),
               ],
@@ -579,11 +733,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       controller: row.multiplier,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: 'Isi *',
-                        prefixText:
-                            '1 ${row.name.text.trim().isEmpty ? 'kemasan' : row.name.text.trim()} = ',
-                        suffixText: baseName,
+                        hintText: 'mis. 10',
+                        prefixText: '1 ${name.isEmpty ? 'kemasan' : name} isi ',
+                        suffixText: previousName,
+                        helperText: total > 0 && previousName != baseName
+                            ? '= ${formatNumber(total)} $baseName'
+                            : null,
                       ),
                       validator: (v) =>
                           parseNumber(v ?? '') < 2 ? 'Isi minimal 2' : null,
@@ -594,9 +752,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     controller: row.price,
                     keyboardType: TextInputType.number,
                     inputFormatters: [ThousandsInputFormatter()],
-                    decoration: const InputDecoration(
+                    onChanged: isBase ? (_) => setState(() {}) : null,
+                    decoration: InputDecoration(
                       labelText: 'Harga jual *',
                       prefixText: 'Rp ',
+                      helperText: !isBase && basePrice > 0 && total > 0
+                          ? 'Bila dijual eceran: ${formatRupiah(basePrice * total)}'
+                          : null,
                     ),
                     validator: (v) =>
                         (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,

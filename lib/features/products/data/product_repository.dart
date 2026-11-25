@@ -131,6 +131,15 @@ class ProductRepository {
     return rows.map((r) => r.read(_db.products.category)!).toList()..sort();
   }
 
+  /// Nama satuan yang pernah dipakai (untuk pilihan cepat di formulir).
+  Future<List<String>> unitNames() async {
+    final rows =
+        await (_db.selectOnly(_db.productUnits, distinct: true)
+              ..addColumns([_db.productUnits.name]))
+            .get();
+    return rows.map((r) => r.read(_db.productUnits.name)!).toList()..sort();
+  }
+
   /// Riwayat stok terbaru lebih dulu.
   Stream<List<MovementEntry>> watchMovements(String productId) {
     final query =

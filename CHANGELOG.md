@@ -4,6 +4,23 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 
 ## [Unreleased]
 
+### Diperbaiki (masukan uji coba)
+- **Struk sebagai gambar** tidak lagi hitam: latar transparan diganti putih.
+- **Stok menipis**:
+  - Bila batas tidak diisi dan produk punya kemasan, peringatan otomatis muncul saat
+    stok kurang dari 1 kemasan terkecil (mis. < 1 Strip).
+  - Batas bisa diisi dalam satuan apa pun (mis. 2 Strip).
+  - Beranda menampilkan "Obat perlu diperhatikan" (habis, menipis, kedaluwarsa,
+    hampir ED).
+- **Satuan produk lebih mudah**:
+  - Pilihan cepat (Tablet → Strip → Box, Kapsul → Strip → Box, Botol, Tube, Sachet, Pcs).
+  - Isi kemasan dihitung dari kemasan sebelumnya ("1 Box isi 10 Strip").
+  - Perkiraan harga bila dijual eceran.
+  - Pilihan nama satuan lebih banyak, termasuk satuan yang pernah dipakai.
+- **WhatsApp**: bila WhatsApp dan WhatsApp Business sama-sama terpasang, aplikasi
+  menanyakan mau kirim lewat yang mana (bisa diingat; diubah di Printer & Struk).
+- **Ikon & nama aplikasi**: ikon kapsul sendiri (bukan logo Flutter), nama "POS Apotek".
+
 ### Ditambahkan
 - **Shift (langkah 5)**:
   - Buka shift dengan modal awal; Kasir meminta buka shift dulu sebelum berjualan.
