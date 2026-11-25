@@ -164,6 +164,13 @@ Indeks tambahan: `product_units(product_id)`, `product_units(barcode)` unik,
 | `auth.recovery_hash` | Hash kode pemulihan Pemilik |
 | `auth.recovery_salt` | Salt kode pemulihan |
 | `stock.near_expiry_days` | Batas peringatan "hampir ED" dalam hari (bawaan 90) |
+| `store.logo_file` | Nama file logo di folder `product_photos/` (ikut backup) |
+| `printer.type` | `none` / `bluetooth` / `network` / `android` |
+| `printer.bt_address`, `printer.bt_name` | Printer Bluetooth terpilih |
+| `printer.host`, `printer.port` | Printer WiFi (port bawaan 9100) |
+| `printer.paper` | `mm58` / `mm80` |
+| `printer.auto_print` | Cetak otomatis setelah transaksi (bawaan `true`) |
+| `receipt.show_logo` | Tampilkan logo di struk (bawaan `true`) |
 
 ## Migrasi
 

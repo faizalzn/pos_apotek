@@ -5,6 +5,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 ## [Unreleased]
 
 ### Ditambahkan
+- **Struk (langkah 4, dimajukan)**:
+  - Setelah transaksi: **Cetak struk**, **WhatsApp** (ke nomor pelanggan atau pilih
+    kontak), **Bagikan** sebagai gambar/PDF. Cetak otomatis bila printer sudah diatur.
+  - Cetak ulang dari Riwayat (bertanda SALINAN).
+  - Pengaturan → **Printer & struk**: printer thermal Bluetooth atau WiFi (ESC/POS),
+    atau printer lain lewat layanan cetak Android; kertas 58/80 mm; cetak tes.
+  - **Logo apotek** di Data apotek, tampil di struk & ikut backup.
 - **Backup & pulihkan (langkah 3b)** — menu Pengaturan → Backup & pulihkan (Pemilik):
   - Kirim backup lengkap (data + foto) lewat Google Drive/WhatsApp, atau simpan ke
     penyimpanan HP/flashdisk.

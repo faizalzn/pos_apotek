@@ -8,6 +8,7 @@ import '../../../core/widgets/common.dart';
 import '../../auth/application/session_controller.dart';
 import '../../auth/data/user_repository.dart' show UserRuleException;
 import '../../products/presentation/widgets/product_widgets.dart';
+import '../../receipt/presentation/receipt_actions.dart';
 import '../data/sale_service.dart';
 
 /// Daftar transaksi per hari.
@@ -372,6 +373,8 @@ class SaleDetailScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    ReceiptActions(saleId: s.id, isCopy: true),
                     if (isOwner && !voided) ...[
                       const SizedBox(height: 16),
                       OutlinedButton.icon(

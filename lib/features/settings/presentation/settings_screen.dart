@@ -7,6 +7,8 @@ import '../../auth/application/session_controller.dart';
 import '../../auth/data/recovery_code_service.dart';
 import '../../products/data/product_models.dart';
 import '../../backup/presentation/backup_screen.dart';
+import '../../receipt/data/printer_settings.dart';
+import '../../receipt/presentation/printer_settings_screen.dart';
 import '../data/settings_repository.dart';
 import 'change_pin_screen.dart';
 import 'store_profile_screen.dart';
@@ -118,6 +120,19 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ],
           if (isOwner) ...[
+            ListTile(
+              leading: const Icon(Icons.print_outlined),
+              title: const Text('Printer & struk'),
+              subtitle: Text(
+                ref.watch(printerSettingsProvider).value?.description ?? '',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const PrinterSettingsScreen()),
+              ),
+            ),
+          ],
+          if (isOwner) ...[
             const _Section('Data'),
             ListTile(
               leading: const Icon(Icons.backup_outlined),
@@ -147,7 +162,6 @@ class SettingsScreen extends ConsumerWidget {
           if (isOwner) ...[
             const _Section('Segera hadir'),
             for (final (icon, label) in const [
-              (Icons.print_outlined, 'Printer & struk'),
               (Icons.qr_code_2_outlined, 'QRIS'),
               (Icons.send_outlined, 'Notifikasi Telegram'),
               (Icons.upload_file_outlined, 'Impor produk dari Excel'),

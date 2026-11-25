@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/format.dart';
 import '../../../core/widgets/common.dart';
+import '../../receipt/presentation/receipt_actions.dart';
 import 'cashier_screen.dart';
 
 /// Konfirmasi setelah transaksi tersimpan.
@@ -68,7 +69,9 @@ class SaleSuccessScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
+                  ReceiptActions(saleId: sale.id, autoPrint: true),
+                  const SizedBox(height: 24),
                   FilledButton.icon(
                     key: const Key('new-sale'),
                     style: FilledButton.styleFrom(
