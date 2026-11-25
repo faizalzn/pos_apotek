@@ -112,8 +112,19 @@ class ProductSummary {
   DateTime? get nearestExpiry =>
       batches.map((b) => b.expiryDate).whereType<DateTime>().firstOrNull;
 
+  /// Batas stok menipis (satuan terkecil). Bila tidak diatur dan produk punya
+  /// kemasan, otomatis: kurang dari 1 kemasan terkecil (mis. < 1 Strip).
+  int get lowStockThreshold => product.minStock > 0
+      ? product.minStock
+      : units.length > 1
+      ? units[1].multiplier - 1
+      : 0;
+
+  /// Batas otomatis dipakai (bukan diatur Pemilik).
+  bool get isAutoLowStock => product.minStock == 0 && units.length > 1;
+
   bool get isLowStock =>
-      product.minStock > 0 && stock > 0 && stock <= product.minStock;
+      lowStockThreshold > 0 && stock > 0 && stock <= lowStockThreshold;
 
   bool get isOutOfStock => stock <= 0;
 

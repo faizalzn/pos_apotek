@@ -385,7 +385,63 @@ void main() {
       expect(endOfMonth(2028, 2), DateTime(2028, 2, 29));
     });
   });
+
+  group('stok menipis', () {
+    Future<ProductSummary> withStock(ProductInput input, int tablets) async {
+      final created = await repo.create(input);
+      final p = await summary(created.id);
+      if (tablets > 0) {
+        await repo.receiveStock(
+          productId: p.product.id,
+          unit: p.baseUnit,
+          quantity: tablets,
+          expiryDate: endOfMonth(2028, 1),
+          costPerSelectedUnit: 300,
+        );
+      }
+      return summary(created.id);
+    }
+
+    ProductInput noMin(List<UnitInput> units) => ProductInput(
+          name: 'Obat ${units.length}',
+          drugClass: DrugClass.bebas,
+          units: units,
+        );
+
+    const tablet = UnitInput(name: 'Tablet', multiplier: 1, sellPrice: 500);
+    const strip = UnitInput(name: 'Strip', multiplier: 10, sellPrice: 4500);
+
+    test('tanpa batas: otomatis kurang dari 1 kemasan terkecil', () async {
+      final low = await withStock(noMin([tablet, strip]), 9);
+      expect(low.isAutoLowStock, isTrue);
+      expect(low.lowStockThreshold, 9);
+      expect(low.isLowStock, isTrue);
+      expect(ProductFilter.lowStock.matches(low, clock()), isTrue);
+
+      final ok = await withStock(noMin([tablet, strip]), 10);
+      expect(ok.isLowStock, isFalse);
+    });
+
+    test('habis bukan "menipis" tetapi masuk filter Habis', () async {
+      final empty = await withStock(noMin([tablet, strip]), 0);
+      expect(empty.isLowStock, isFalse);
+      expect(ProductFilter.outOfStock.matches(empty, clock()), isTrue);
+    });
+
+    test('satu satuan tanpa batas: tidak diperingatkan sebelum habis', () async {
+      final single = await withStock(noMin([tablet]), 1);
+      expect(single.lowStockThreshold, 0);
+      expect(single.isLowStock, isFalse);
+    });
+
+    test('batas diatur Pemilik dipakai (≤ batas)', () async {
+      final p = await withStock(paracetamol(), 50); // minStock 50
+      expect(p.isAutoLowStock, isFalse);
+      expect(p.isLowStock, isTrue);
+    });
+  });
 }
+
 
 ProductUnit _unit(String name, int multiplier) => ProductUnit(
       id: name,

@@ -228,10 +228,12 @@ class _Body extends ConsumerWidget {
                       const SizedBox(height: 8),
                       Wrap(spacing: 6, runSpacing: 4, children: warnings),
                     ],
-                    if (p.minStock > 0) ...[
+                    if (summary.lowStockThreshold > 0) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'Peringatan bila ≤ ${formatNumber(p.minStock)} ${summary.baseUnit.name}',
+                        summary.isAutoLowStock
+                            ? 'Diingatkan bila kurang dari 1 ${summary.units[1].name} (otomatis)'
+                            : 'Diingatkan bila stok ≤ ${formatNumber(p.minStock)} ${summary.baseUnit.name}',
                         style: theme.textTheme.bodySmall,
                       ),
                     ],
