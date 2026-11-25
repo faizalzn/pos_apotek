@@ -6,6 +6,7 @@ import '../../../core/widgets/recovery_code_view.dart';
 import '../../auth/application/session_controller.dart';
 import '../../auth/data/recovery_code_service.dart';
 import '../../products/data/product_models.dart';
+import '../../backup/presentation/backup_screen.dart';
 import '../data/settings_repository.dart';
 import 'change_pin_screen.dart';
 import 'store_profile_screen.dart';
@@ -116,6 +117,18 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () => _open(context, const UsersScreen()),
             ),
           ],
+          if (isOwner) ...[
+            const _Section('Data'),
+            ListTile(
+              leading: const Icon(Icons.backup_outlined),
+              title: const Text('Backup & pulihkan'),
+              subtitle: const Text('Simpan data ke Drive/WhatsApp, pulihkan dari backup'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
+              ),
+            ),
+          ],
           const _Section('Keamanan'),
           ListTile(
             leading: const Icon(Icons.pin_outlined),
@@ -138,7 +151,6 @@ class SettingsScreen extends ConsumerWidget {
               (Icons.qr_code_2_outlined, 'QRIS'),
               (Icons.send_outlined, 'Notifikasi Telegram'),
               (Icons.upload_file_outlined, 'Impor produk dari Excel'),
-              (Icons.backup_outlined, 'Backup & restore'),
             ])
               ListTile(enabled: false, leading: Icon(icon), title: Text(label)),
           ],

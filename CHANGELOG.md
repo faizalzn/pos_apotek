@@ -5,6 +5,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 ## [Unreleased]
 
 ### Ditambahkan
+- **Backup & pulihkan (langkah 3b)** — menu Pengaturan → Backup & pulihkan (Pemilik):
+  - Kirim backup lengkap (data + foto) lewat Google Drive/WhatsApp, atau simpan ke
+    penyimpanan HP/flashdisk.
+  - Pengingat di beranda bila 7 hari belum backup ke luar HP.
+  - Cadangan harian otomatis di HP (7 hari terakhir).
+  - Pulihkan dari file atau dari cadangan otomatis; file diperiksa dulu, data saat ini
+    disimpan sebagai cadangan, lalu aplikasi dibuka ulang.
+  - Wizard setup: **Pulihkan dari backup** untuk pindah ke HP baru.
 - **Kasir (langkah 3)**:
   - Cari barang atau scan barcode (kamera, atau scanner USB/Bluetooth yang mengetik
     lalu Enter). Produk dengan beberapa satuan → pilih satuan.
