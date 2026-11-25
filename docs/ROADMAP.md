@@ -5,13 +5,15 @@
 Urutan pengerjaan:
 
 1. ✅ **Fondasi** — database, login PIN (Pemilik/Kasir), wizard setup awal
+   - ✅ Kode darurat developer & saran Pemilik kedua
 2. **Produk** — CRUD produk, foto, satuan bertingkat, tambah stok (batch + ED)
 3. **Kasir** — cari/scan, keranjang, pembayaran tunai, kembalian
+3b. **Backup & restore** — dimajukan agar data aman sebelum dipakai berjualan
 4. **QRIS dinamis** — scan QRIS statis merchant, sisipkan nominal
 5. **Struk** — printer ESC/POS (Bluetooth/USB/WiFi), PDF/gambar, kirim via WhatsApp
 6. **Shift & laporan** — buka/tutup shift, selisih kas, laporan harian & per shift
 7. **Notifikasi Telegram** — per transaksi & ringkasan tutup shift
-8. **Impor & backup** — impor Excel/CSV dengan pemetaan kolom, backup/restore
+8. **Impor** — impor Excel/CSV dengan pemetaan kolom
 
 Setelah langkah 3 aplikasi sudah bisa diuji coba di apotek.
 

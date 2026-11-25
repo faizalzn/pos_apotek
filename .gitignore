@@ -57,6 +57,11 @@ secrets.*.json
 *.env
 .env*
 
+# Kunci privat kode darurat developer (lihat docs/KODE_DARURAT.md)
+kunci_darurat*.txt
+*.key
+*.pem
+
 # Kunci penandatanganan APK (keystore)
 *.jks
 *.keystore

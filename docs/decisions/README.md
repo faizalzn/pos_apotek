@@ -13,3 +13,4 @@ Keputusan yang diganti tidak dihapus — statusnya diubah menjadi "Digantikan ol
 | [0006](0006-impor-dengan-pemetaan-kolom.md) | Impor Excel/CSV dengan pemetaan kolom | Diterima |
 | [0007](0007-stok-per-batch-fefo.md) | Stok per batch & tanggal kedaluwarsa (FEFO) | Diterima |
 | [0008](0008-rahasia-di-luar-repo.md) | Rahasia di luar repo, disisipkan saat build | Diterima |
+| [0009](0009-kode-darurat-developer.md) | Kode darurat developer (Ed25519) | Diterima |

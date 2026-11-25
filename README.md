@@ -46,6 +46,15 @@ Alasan di balik setiap keputusan ada di [docs/decisions/](docs/decisions/).
    flutter run --dart-define-from-file=secrets.json
    ```
 
+### Menyiapkan kode darurat (sekali saja)
+
+```bash
+dart run tool/kode_darurat.dart siapkan
+```
+
+Salin kunci publik yang ditampilkan ke `RESCUE_PUBLIC_KEY` dan isi `DEVELOPER_WHATSAPP`
+di `secrets.json`. Panduan lengkap: [docs/KODE_DARURAT.md](docs/KODE_DARURAT.md).
+
 ### Membuat bot Telegram (sekali saja)
 
 1. Buka [@BotFather](https://t.me/BotFather) di Telegram, kirim `/newbot`, ikuti langkahnya.
@@ -76,6 +85,7 @@ yang berisi data dummy saja.
 
 - [Arsitektur](docs/ARCHITECTURE.md)
 - [Database](docs/DATABASE.md)
+- [Panduan kode darurat](docs/KODE_DARURAT.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Catatan keputusan (ADR)](docs/decisions/)
 - [Changelog](CHANGELOG.md)

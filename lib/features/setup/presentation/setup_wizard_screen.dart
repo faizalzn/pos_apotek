@@ -209,16 +209,32 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
           code: _result!.recoveryCode,
           doneLabel: 'Selesai, masuk ke aplikasi',
           onDone: _enterApp,
-          footer: Card(
-            child: ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Pengaturan lainnya'),
-              subtitle: const Text(
-                'QRIS, printer, dan notifikasi Telegram bisa diatur kapan saja '
-                'di menu Pengaturan.',
+          footer: Column(
+            children: [
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.group_add_outlined),
+                  title: const Text('Saran: buat Pemilik kedua'),
+                  subtitle: const Text(
+                    'Jika suatu saat PIN lupa dan kode ini hilang, Pemilik kedua '
+                    'bisa mengatur ulang PIN Anda. Tambahkan di Pengaturan → '
+                    'Pengguna.',
+                  ),
+                  iconColor: theme.colorScheme.primary,
+                ),
               ),
-              iconColor: theme.colorScheme.primary,
-            ),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('Pengaturan lainnya'),
+                  subtitle: const Text(
+                    'QRIS, printer, dan notifikasi Telegram bisa diatur kapan '
+                    'saja di menu Pengaturan.',
+                  ),
+                  iconColor: theme.colorScheme.primary,
+                ),
+              ),
+            ],
           ),
         );
     }
