@@ -4,7 +4,7 @@
 
 Urutan pengerjaan:
 
-1. **Fondasi** — database, login PIN (Pemilik/Kasir), wizard setup awal
+1. ✅ **Fondasi** — database, login PIN (Pemilik/Kasir), wizard setup awal
 2. **Produk** — CRUD produk, foto, satuan bertingkat, tambah stok (batch + ED)
 3. **Kasir** — cari/scan, keranjang, pembayaran tunai, kembalian
 4. **QRIS dinamis** — scan QRIS statis merchant, sisipkan nominal
