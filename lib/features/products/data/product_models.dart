@@ -1,15 +1,32 @@
 import '../../../core/database/app_database.dart';
 
-/// Batas "hampir kedaluwarsa".
-const nearExpiryWindow = Duration(days: 90);
+/// Bawaan: peringatan "hampir kedaluwarsa" muncul 90 hari (±3 bulan) sebelum ED.
+const defaultNearExpiryDays = 90;
+
+/// Pilihan lama peringatan ED yang ditawarkan ke pengguna (hari → label).
+const nearExpiryChoices = {
+  30: '1 bulan',
+  60: '2 bulan',
+  90: '3 bulan',
+  180: '6 bulan',
+  365: '12 bulan',
+};
+
+String nearExpiryLabel(int days) => nearExpiryChoices[days] ?? '$days hari';
 
 enum ExpiryStatus { none, ok, soon, expired }
 
-ExpiryStatus expiryStatusOf(DateTime? expiry, DateTime now) {
+ExpiryStatus expiryStatusOf(
+  DateTime? expiry,
+  DateTime now, {
+  int windowDays = defaultNearExpiryDays,
+}) {
   if (expiry == null) return ExpiryStatus.none;
   final today = DateTime(now.year, now.month, now.day);
   if (expiry.isBefore(today)) return ExpiryStatus.expired;
-  if (expiry.isBefore(today.add(nearExpiryWindow))) return ExpiryStatus.soon;
+  if (expiry.isBefore(today.add(Duration(days: windowDays)))) {
+    return ExpiryStatus.soon;
+  }
   return ExpiryStatus.ok;
 }
 
@@ -39,6 +56,7 @@ class ProductInput {
     this.category = '',
     required this.drugClass,
     this.minStock = 0,
+    this.nearExpiryDays,
     this.photoFile,
     required this.units,
   });
@@ -48,6 +66,9 @@ class ProductInput {
   final String category;
   final DrugClass drugClass;
   final int minStock;
+
+  /// `null` = ikuti pengaturan umum.
+  final int? nearExpiryDays;
   final String? photoFile;
   final List<UnitInput> units;
 }
@@ -58,6 +79,7 @@ class ProductSummary {
     required this.product,
     required List<ProductUnit> units,
     required this.batches,
+    this.defaultExpiryDays = defaultNearExpiryDays,
   }) : units = [...units]..sort((a, b) => a.multiplier.compareTo(b.multiplier));
 
   final Product product;
@@ -67,6 +89,15 @@ class ProductSummary {
 
   /// StockBatch yang masih ada stoknya, urut ED terdekat (tanpa ED paling akhir).
   final List<StockBatch> batches;
+
+  /// Pengaturan umum peringatan ED (hari).
+  final int defaultExpiryDays;
+
+  /// Lama peringatan ED yang berlaku untuk produk ini.
+  int get nearExpiryDays => product.nearExpiryDays ?? defaultExpiryDays;
+
+  ExpiryStatus batchStatus(StockBatch b, DateTime now) =>
+      expiryStatusOf(b.expiryDate, now, windowDays: nearExpiryDays);
 
   ProductUnit get baseUnit => units.first;
 
@@ -89,7 +120,7 @@ class ProductSummary {
   ExpiryStatus expiryStatus(DateTime now) {
     var worst = ExpiryStatus.none;
     for (final b in batches) {
-      final s = expiryStatusOf(b.expiryDate, now);
+      final s = batchStatus(b, now);
       if (s.index > worst.index) worst = s;
     }
     return worst;
@@ -115,15 +146,15 @@ enum ProductFilter {
   final String label;
 
   bool matches(ProductSummary p, DateTime now) => switch (this) {
-        ProductFilter.all => p.product.isActive,
-        ProductFilter.lowStock => p.product.isActive && p.isLowStock,
-        ProductFilter.outOfStock => p.product.isActive && p.isOutOfStock,
-        ProductFilter.nearExpiry =>
-          p.product.isActive && p.expiryStatus(now) == ExpiryStatus.soon,
-        ProductFilter.expired =>
-          p.product.isActive && p.expiryStatus(now) == ExpiryStatus.expired,
-        ProductFilter.archived => !p.product.isActive,
-      };
+    ProductFilter.all => p.product.isActive,
+    ProductFilter.lowStock => p.product.isActive && p.isLowStock,
+    ProductFilter.outOfStock => p.product.isActive && p.isOutOfStock,
+    ProductFilter.nearExpiry =>
+      p.product.isActive && p.expiryStatus(now) == ExpiryStatus.soon,
+    ProductFilter.expired =>
+      p.product.isActive && p.expiryStatus(now) == ExpiryStatus.expired,
+    ProductFilter.archived => !p.product.isActive,
+  };
 }
 
 /// Bagian stok yang diambil dari satu batch.
@@ -143,7 +174,8 @@ class InsufficientStockException implements Exception {
   final int available;
 
   @override
-  String toString() => 'Stok tidak cukup: diminta $requested, tersedia $available';
+  String toString() =>
+      'Stok tidak cukup: diminta $requested, tersedia $available';
 }
 
 /// Riwayat stok beserta nama pengguna yang mencatatnya.

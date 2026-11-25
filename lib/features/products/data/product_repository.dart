@@ -12,6 +12,9 @@ import 'product_models.dart';
 /// Kesalahan isian produk/stok. [message] siap ditampilkan ke pengguna.
 typedef ProductRuleException = UserRuleException;
 
+/// Kunci pengaturan umum lama peringatan ED (hari). Lihat [SettingKeys].
+const nearExpirySettingKey = 'stock.near_expiry_days';
+
 class ProductRepository {
   ProductRepository(this._db, this._now);
 
@@ -30,6 +33,7 @@ class ProductRepository {
         _db.products,
         _db.productUnits,
         _db.batches,
+        _db.appSettings,
       ]),
     );
     late StreamController<List<ProductSummary>> controller;
@@ -54,18 +58,26 @@ class ProductRepository {
   }
 
   Future<List<ProductSummary>> loadAll() async {
-    final products = await (_db.select(_db.products)
-          ..orderBy([(p) => OrderingTerm.asc(p.name.collate(Collate.noCase))]))
-        .get();
+    final products =
+        await (_db.select(_db.products)..orderBy([
+              (p) => OrderingTerm.asc(p.name.collate(Collate.noCase)),
+            ]))
+            .get();
     final units = await _db.select(_db.productUnits).get();
-    final batches = await (_db.select(_db.batches)
-          ..where((b) => b.quantity.isBiggerThanValue(0)))
-        .get();
+    final batches = await (_db.select(
+      _db.batches,
+    )..where((b) => b.quantity.isBiggerThanValue(0))).get();
 
     final unitsBy = <String, List<ProductUnit>>{};
     for (final u in units) {
       (unitsBy[u.productId] ??= []).add(u);
     }
+    final setting = await (_db.select(
+      _db.appSettings,
+    )..where((s) => s.key.equals(nearExpirySettingKey))).getSingleOrNull();
+    final defaultDays =
+        int.tryParse(setting?.value ?? '') ?? defaultNearExpiryDays;
+
     final batchesBy = <String, List<StockBatch>>{};
     for (final b in _sortFefo(batches)) {
       (batchesBy[b.productId] ??= []).add(b);
@@ -77,13 +89,14 @@ class ProductRepository {
             product: p,
             units: us,
             batches: batchesBy[p.id] ?? const [],
+            defaultExpiryDays: defaultDays,
           ),
     ];
   }
 
   Stream<ProductSummary?> watchOne(String productId) => watchAll().map(
-        (list) => list.where((p) => p.product.id == productId).firstOrNull,
-      );
+    (list) => list.where((p) => p.product.id == productId).firstOrNull,
+  );
 
   Future<ProductSummary?> getOne(String productId) async =>
       (await loadAll()).where((p) => p.product.id == productId).firstOrNull;
@@ -99,8 +112,7 @@ class ProductRepository {
         _db.products,
         _db.products.id.equalsExp(_db.productUnits.productId),
       ),
-    ])
-      ..where(_db.productUnits.barcode.equals(code));
+    ])..where(_db.productUnits.barcode.equals(code));
     final row = await query.getSingleOrNull();
     if (row == null) return null;
     return (
@@ -111,34 +123,39 @@ class ProductRepository {
 
   /// Daftar kategori yang pernah dipakai, untuk saran isian.
   Future<List<String>> categories() async {
-    final rows = await (_db.selectOnly(_db.products, distinct: true)
-          ..addColumns([_db.products.category])
-          ..where(_db.products.category.isNotValue('')))
-        .get();
+    final rows =
+        await (_db.selectOnly(_db.products, distinct: true)
+              ..addColumns([_db.products.category])
+              ..where(_db.products.category.isNotValue('')))
+            .get();
     return rows.map((r) => r.read(_db.products.category)!).toList()..sort();
   }
 
   /// Riwayat stok terbaru lebih dulu.
   Stream<List<MovementEntry>> watchMovements(String productId) {
-    final query = _db.select(_db.stockMovements).join([
-      leftOuterJoin(_db.users, _db.users.id.equalsExp(_db.stockMovements.userId)),
-      leftOuterJoin(
-        _db.batches,
-        _db.batches.id.equalsExp(_db.stockMovements.batchId),
-      ),
-    ])
-      ..where(_db.stockMovements.productId.equals(productId))
-      ..orderBy([OrderingTerm.desc(_db.stockMovements.createdAt)]);
+    final query =
+        _db.select(_db.stockMovements).join([
+            leftOuterJoin(
+              _db.users,
+              _db.users.id.equalsExp(_db.stockMovements.userId),
+            ),
+            leftOuterJoin(
+              _db.batches,
+              _db.batches.id.equalsExp(_db.stockMovements.batchId),
+            ),
+          ])
+          ..where(_db.stockMovements.productId.equals(productId))
+          ..orderBy([OrderingTerm.desc(_db.stockMovements.createdAt)]);
     return query.watch().map(
-          (rows) => [
-            for (final r in rows)
-              MovementEntry(
-                movement: r.readTable(_db.stockMovements),
-                userName: r.readTableOrNull(_db.users)?.name,
-                batch: r.readTableOrNull(_db.batches),
-              ),
-          ],
-        );
+      (rows) => [
+        for (final r in rows)
+          MovementEntry(
+            movement: r.readTable(_db.stockMovements),
+            userName: r.readTableOrNull(_db.users)?.name,
+            batch: r.readTableOrNull(_db.batches),
+          ),
+      ],
+    );
   }
 
   // ───────────────────────────── Produk ─────────────────────────────
@@ -148,7 +165,9 @@ class ProductRepository {
     final now = _now();
     final id = _uuid.v4();
     await _db.transaction(() async {
-      await _db.into(_db.products).insert(
+      await _db
+          .into(_db.products)
+          .insert(
             ProductsCompanion.insert(
               id: id,
               name: input.name.trim(),
@@ -157,6 +176,7 @@ class ProductRepository {
               drugClass: input.drugClass,
               photoFile: Value(input.photoFile),
               minStock: Value(input.minStock),
+              nearExpiryDays: Value(input.nearExpiryDays),
               createdAt: now,
               updatedAt: now,
             ),
@@ -165,16 +185,18 @@ class ProductRepository {
         await _insertUnit(id, u, now);
       }
     });
-    return (await (_db.select(_db.products)..where((p) => p.id.equals(id)))
-        .getSingle());
+    return (await (_db.select(
+      _db.products,
+    )..where((p) => p.id.equals(id))).getSingle());
   }
 
   Future<void> update(String productId, ProductInput input) async {
     final units = await _validate(input, productId: productId);
     final now = _now();
     await _db.transaction(() async {
-      await (_db.update(_db.products)..where((p) => p.id.equals(productId)))
-          .write(
+      await (_db.update(
+        _db.products,
+      )..where((p) => p.id.equals(productId))).write(
         ProductsCompanion(
           name: Value(input.name.trim()),
           genericName: Value(input.genericName.trim()),
@@ -182,22 +204,22 @@ class ProductRepository {
           drugClass: Value(input.drugClass),
           photoFile: Value(input.photoFile),
           minStock: Value(input.minStock),
+          nearExpiryDays: Value(input.nearExpiryDays),
           updatedAt: Value(now),
         ),
       );
       final keepIds = units.map((u) => u.id).whereType<String>().toSet();
-      await (_db.delete(_db.productUnits)
-            ..where(
-              (u) => u.productId.equals(productId) & u.id.isNotIn(keepIds),
-            ))
+      await (_db.delete(_db.productUnits)..where(
+            (u) => u.productId.equals(productId) & u.id.isNotIn(keepIds),
+          ))
           .go();
       for (final u in units) {
         if (u.id == null) {
           await _insertUnit(productId, u, now);
         } else {
-          await (_db.update(_db.productUnits)
-                ..where((x) => x.id.equals(u.id!)))
-              .write(
+          await (_db.update(
+            _db.productUnits,
+          )..where((x) => x.id.equals(u.id!))).write(
             ProductUnitsCompanion(
               name: Value(u.name),
               multiplier: Value(u.multiplier),
@@ -213,25 +235,23 @@ class ProductRepository {
 
   Future<void> setArchived(String productId, {required bool archived}) =>
       (_db.update(_db.products)..where((p) => p.id.equals(productId))).write(
-        ProductsCompanion(
-          isActive: Value(!archived),
-          updatedAt: Value(_now()),
-        ),
+        ProductsCompanion(isActive: Value(!archived), updatedAt: Value(_now())),
       );
 
-  Future<void> _insertUnit(String productId, UnitInput u, DateTime now) =>
-      _db.into(_db.productUnits).insert(
-            ProductUnitsCompanion.insert(
-              id: _uuid.v4(),
-              productId: productId,
-              name: u.name,
-              multiplier: u.multiplier,
-              sellPrice: u.sellPrice,
-              barcode: Value(u.barcode),
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
+  Future<void> _insertUnit(String productId, UnitInput u, DateTime now) => _db
+      .into(_db.productUnits)
+      .insert(
+        ProductUnitsCompanion.insert(
+          id: _uuid.v4(),
+          productId: productId,
+          name: u.name,
+          multiplier: u.multiplier,
+          sellPrice: u.sellPrice,
+          barcode: Value(u.barcode),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
   /// Memeriksa isian dan mengembalikan satuan yang sudah dirapikan.
   Future<List<UnitInput>> _validate(
@@ -240,6 +260,9 @@ class ProductRepository {
   }) async {
     if (input.name.trim().isEmpty) {
       throw const ProductRuleException('Nama produk wajib diisi');
+    }
+    if (input.nearExpiryDays case final d? when d < 1) {
+      throw const ProductRuleException('Lama peringatan ED minimal 1 hari');
     }
     if (input.minStock < 0) {
       throw const ProductRuleException('Stok minimum tidak boleh negatif');
@@ -255,7 +278,9 @@ class ProductRepository {
           name: u.name.trim(),
           multiplier: u.multiplier,
           sellPrice: u.sellPrice,
-          barcode: (u.barcode?.trim().isEmpty ?? true) ? null : u.barcode!.trim(),
+          barcode: (u.barcode?.trim().isEmpty ?? true)
+              ? null
+              : u.barcode!.trim(),
         ),
     ];
 
@@ -331,13 +356,13 @@ class ProductRepository {
 
       StockBatch? existing;
       if (batchNo.isNotEmpty) {
-        final candidates = await (_db.select(_db.batches)
-              ..where(
-                (b) =>
-                    b.productId.equals(productId) &
-                    b.batchNumber.equals(batchNo),
-              ))
-            .get();
+        final candidates =
+            await (_db.select(_db.batches)..where(
+                  (b) =>
+                      b.productId.equals(productId) &
+                      b.batchNumber.equals(batchNo),
+                ))
+                .get();
         existing = candidates
             .where((b) => _sameDay(b.expiryDate, expiryDate))
             .firstOrNull;
@@ -350,9 +375,10 @@ class ProductRepository {
         final avgCost = total == 0
             ? cost
             : (existing.costPerUnit * existing.quantity + cost * baseQty) /
-                total;
-        await (_db.update(_db.batches)..where((b) => b.id.equals(batchId)))
-            .write(
+                  total;
+        await (_db.update(
+          _db.batches,
+        )..where((b) => b.id.equals(batchId))).write(
           BatchesCompanion(
             quantity: Value(total),
             costPerUnit: Value(avgCost),
@@ -361,7 +387,9 @@ class ProductRepository {
         );
       } else {
         batchId = _uuid.v4();
-        await _db.into(_db.batches).insert(
+        await _db
+            .into(_db.batches)
+            .insert(
               BatchesCompanion.insert(
                 id: batchId,
                 productId: productId,
@@ -439,21 +467,25 @@ class ProductRepository {
     required int quantity,
     StockMovementType type = StockMovementType.sale,
     String? userId,
+    String? saleId,
     String note = '',
   }) {
     return _db.transaction(() async {
       final now = _now();
-      final batches = _sortFefo(
-        await (_db.select(_db.batches)
-              ..where(
+      final batches =
+          _sortFefo(
+                await (_db.select(_db.batches)..where(
+                      (b) =>
+                          b.productId.equals(productId) &
+                          b.quantity.isBiggerThanValue(0),
+                    ))
+                    .get(),
+              )
+              .where(
                 (b) =>
-                    b.productId.equals(productId) &
-                    b.quantity.isBiggerThanValue(0),
-              ))
-            .get(),
-      )
-          .where((b) => expiryStatusOf(b.expiryDate, now) != ExpiryStatus.expired)
-          .toList();
+                    expiryStatusOf(b.expiryDate, now) != ExpiryStatus.expired,
+              )
+              .toList();
 
       final available = batches.fold(0, (s, b) => s + b.quantity);
       if (available < quantity) {
@@ -480,6 +512,7 @@ class ProductRepository {
           type: type,
           quantity: -take,
           userId: userId,
+          saleId: saleId,
           note: note,
           now: now,
         );
@@ -498,9 +531,9 @@ class ProductRepository {
     String? userId,
   }) {
     return _db.transaction(() async {
-      final batch = await (_db.select(_db.batches)
-            ..where((b) => b.id.equals(batchId)))
-          .getSingle();
+      final batch = await (_db.select(
+        _db.batches,
+      )..where((b) => b.id.equals(batchId))).getSingle();
       final change = delta(batch);
       if (change == 0) return;
       final now = _now();
@@ -529,45 +562,49 @@ class ProductRepository {
     required int quantity,
     required DateTime now,
     String? userId,
+    String? saleId,
     String note = '',
-  }) =>
-      _db.into(_db.stockMovements).insert(
-            StockMovementsCompanion.insert(
-              id: _uuid.v4(),
-              productId: productId,
-              batchId: batchId,
-              type: type,
-              quantity: quantity,
-              note: Value(note.trim()),
-              userId: Value(userId),
-              createdAt: now,
-              updatedAt: now,
-            ),
-          );
+  }) => _db
+      .into(_db.stockMovements)
+      .insert(
+        StockMovementsCompanion.insert(
+          id: _uuid.v4(),
+          productId: productId,
+          batchId: batchId,
+          type: type,
+          quantity: quantity,
+          note: Value(note.trim()),
+          userId: Value(userId),
+          saleId: Value(saleId),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
   /// Harga beli terakhir per satuan terkecil (untuk stok masuk oleh kasir
   /// yang tidak mengisi harga beli).
   Future<double> _lastCost(String productId) async {
-    final last = await (_db.select(_db.batches)
-          ..where((b) => b.productId.equals(productId))
-          ..orderBy([(b) => OrderingTerm.desc(b.receivedAt)])
-          ..limit(1))
-        .getSingleOrNull();
+    final last =
+        await (_db.select(_db.batches)
+              ..where((b) => b.productId.equals(productId))
+              ..orderBy([(b) => OrderingTerm.desc(b.receivedAt)])
+              ..limit(1))
+            .getSingleOrNull();
     return last?.costPerUnit ?? 0;
   }
 
-  static List<StockBatch> _sortFefo(List<StockBatch> batches) => [...batches]
-    ..sort((a, b) {
-      final ea = a.expiryDate;
-      final eb = b.expiryDate;
-      if (ea == null && eb != null) return 1;
-      if (ea != null && eb == null) return -1;
-      if (ea != null && eb != null) {
-        final c = ea.compareTo(eb);
-        if (c != 0) return c;
-      }
-      return a.receivedAt.compareTo(b.receivedAt);
-    });
+  static List<StockBatch> _sortFefo(List<StockBatch> batches) =>
+      [...batches]..sort((a, b) {
+        final ea = a.expiryDate;
+        final eb = b.expiryDate;
+        if (ea == null && eb != null) return 1;
+        if (ea != null && eb == null) return -1;
+        if (ea != null && eb != null) {
+          final c = ea.compareTo(eb);
+          if (c != 0) return c;
+        }
+        return a.receivedAt.compareTo(b.receivedAt);
+      });
 
   static bool _sameDay(DateTime? a, DateTime? b) {
     if (a == null || b == null) return a == b;
@@ -576,10 +613,8 @@ class ProductRepository {
 }
 
 final productRepositoryProvider = Provider<ProductRepository>(
-  (ref) => ProductRepository(
-    ref.watch(databaseProvider),
-    ref.watch(clockProvider),
-  ),
+  (ref) =>
+      ProductRepository(ref.watch(databaseProvider), ref.watch(clockProvider)),
 );
 
 final productsProvider = StreamProvider<List<ProductSummary>>(

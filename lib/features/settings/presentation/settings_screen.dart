@@ -5,6 +5,8 @@ import '../../../core/widgets/common.dart';
 import '../../../core/widgets/recovery_code_view.dart';
 import '../../auth/application/session_controller.dart';
 import '../../auth/data/recovery_code_service.dart';
+import '../../products/data/product_models.dart';
+import '../data/settings_repository.dart';
 import 'change_pin_screen.dart';
 import 'store_profile_screen.dart';
 import 'users_screen.dart';
@@ -12,8 +14,9 @@ import 'users_screen.dart';
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
-  void _open(BuildContext context, Widget screen) => Navigator.of(context)
-      .push(MaterialPageRoute<void>(builder: (_) => screen));
+  void _open(BuildContext context, Widget screen) =>
+      Navigator.of(context)
+          .push(MaterialPageRoute<void>(builder: (_) => screen));
 
   Future<void> _newRecoveryCode(BuildContext context, WidgetRef ref) async {
     final ok = await confirm(
@@ -45,6 +48,39 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _pickNearExpiry(BuildContext context, WidgetRef ref) async {
+    final current =
+        ref.read(nearExpiryDaysProvider).value ?? defaultNearExpiryDays;
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Ingatkan berapa lama sebelum ED?'),
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Text(
+              'Berlaku untuk semua produk, kecuali produk yang diatur khusus.',
+            ),
+          ),
+          RadioGroup<int>(
+            groupValue: current,
+            onChanged: (v) => Navigator.pop(context, v),
+            child: Column(
+              children: [
+                for (final e in nearExpiryChoices.entries)
+                  RadioListTile<int>(value: e.key, title: Text(e.value)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    await ref
+        .read(settingsRepositoryProvider)
+        .set(SettingKeys.nearExpiryDays, '$picked');
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isOwner = ref.watch(isOwnerProvider);
@@ -61,6 +97,16 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: const Text('Nama, alamat, telepon, catatan struk'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _open(context, const StoreProfileScreen()),
+            ),
+            ListTile(
+              leading: const Icon(Icons.event_busy_outlined),
+              title: const Text('Peringatan kedaluwarsa'),
+              subtitle: Text(
+                '${nearExpiryLabel(ref.watch(nearExpiryDaysProvider).value ?? defaultNearExpiryDays)} '
+                'sebelum ED · bisa diatur khusus per produk',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _pickNearExpiry(context, ref),
             ),
             ListTile(
               leading: const Icon(Icons.group_outlined),
@@ -94,11 +140,7 @@ class SettingsScreen extends ConsumerWidget {
               (Icons.upload_file_outlined, 'Impor produk dari Excel'),
               (Icons.backup_outlined, 'Backup & restore'),
             ])
-              ListTile(
-                enabled: false,
-                leading: Icon(icon),
-                title: Text(label),
-              ),
+              ListTile(enabled: false, leading: Icon(icon), title: Text(label)),
           ],
           const _Section('Tentang'),
           const ListTile(
@@ -120,12 +162,11 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-        child: Text(
-          title,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+    child: Text(
+      title,
+      style: Theme.of(context).textTheme.titleSmall
+          ?.copyWith(color: Theme.of(context).colorScheme.primary),
+    ),
+  );
 }

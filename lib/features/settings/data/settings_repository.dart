@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/clock.dart';
 import '../../../core/database/app_database.dart';
+import '../../products/data/product_models.dart' show defaultNearExpiryDays;
 
 /// Kunci-kunci di tabel `app_settings`.
 abstract final class SettingKeys {
@@ -11,6 +12,9 @@ abstract final class SettingKeys {
   static const storeAddress = 'store.address';
   static const storePhone = 'store.phone';
   static const receiptFooter = 'receipt.footer';
+
+  /// Pengaturan umum: berapa hari sebelum ED peringatan muncul.
+  static const nearExpiryDays = 'stock.near_expiry_days';
 
   static const recoveryHash = 'auth.recovery_hash';
   static const recoverySalt = 'auth.recovery_salt';
@@ -37,28 +41,26 @@ class StoreProfile {
     String? address,
     String? phone,
     String? receiptFooter,
-  }) =>
-      StoreProfile(
-        name: name ?? this.name,
-        address: address ?? this.address,
-        phone: phone ?? this.phone,
-        receiptFooter: receiptFooter ?? this.receiptFooter,
-      );
+  }) => StoreProfile(
+    name: name ?? this.name,
+    address: address ?? this.address,
+    phone: phone ?? this.phone,
+    receiptFooter: receiptFooter ?? this.receiptFooter,
+  );
 
   static StoreProfile fromMap(Map<String, String> map) => StoreProfile(
-        name: map[SettingKeys.storeName] ?? '',
-        address: map[SettingKeys.storeAddress] ?? '',
-        phone: map[SettingKeys.storePhone] ?? '',
-        receiptFooter:
-            map[SettingKeys.receiptFooter] ?? defaultReceiptFooter,
-      );
+    name: map[SettingKeys.storeName] ?? '',
+    address: map[SettingKeys.storeAddress] ?? '',
+    phone: map[SettingKeys.storePhone] ?? '',
+    receiptFooter: map[SettingKeys.receiptFooter] ?? defaultReceiptFooter,
+  );
 
   Map<String, String> toMap() => {
-        SettingKeys.storeName: name.trim(),
-        SettingKeys.storeAddress: address.trim(),
-        SettingKeys.storePhone: phone.trim(),
-        SettingKeys.receiptFooter: receiptFooter.trim(),
-      };
+    SettingKeys.storeName: name.trim(),
+    SettingKeys.storeAddress: address.trim(),
+    SettingKeys.storePhone: phone.trim(),
+    SettingKeys.receiptFooter: receiptFooter.trim(),
+  };
 }
 
 class SettingsRepository {
@@ -68,9 +70,9 @@ class SettingsRepository {
   final Clock _now;
 
   Future<String?> get(String key) async {
-    final row = await (_db.select(_db.appSettings)
-          ..where((s) => s.key.equals(key)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.appSettings,
+    )..where((s) => s.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
@@ -79,24 +81,21 @@ class SettingsRepository {
   Future<void> setAll(Map<String, String> values) async {
     final now = _now();
     await _db.batch((b) {
-      b.insertAllOnConflictUpdate(
-        _db.appSettings,
-        [
-          for (final e in values.entries)
-            AppSettingsCompanion.insert(
-              key: e.key,
-              value: e.value,
-              updatedAt: now,
-            ),
-        ],
-      );
+      b.insertAllOnConflictUpdate(_db.appSettings, [
+        for (final e in values.entries)
+          AppSettingsCompanion.insert(
+            key: e.key,
+            value: e.value,
+            updatedAt: now,
+          ),
+      ]);
     });
   }
 
-  Stream<Map<String, String>> watchAll() =>
-      _db.select(_db.appSettings).watch().map(
-            (rows) => {for (final r in rows) r.key: r.value},
-          );
+  Stream<Map<String, String>> watchAll() => _db
+      .select(_db.appSettings)
+      .watch()
+      .map((rows) => {for (final r in rows) r.key: r.value});
 
   Future<bool> isSetupCompleted() async =>
       await get(SettingKeys.setupCompleted) == 'true';
@@ -115,10 +114,8 @@ class SettingsRepository {
 }
 
 final settingsRepositoryProvider = Provider<SettingsRepository>(
-  (ref) => SettingsRepository(
-    ref.watch(databaseProvider),
-    ref.watch(clockProvider),
-  ),
+  (ref) =>
+      SettingsRepository(ref.watch(databaseProvider), ref.watch(clockProvider)),
 );
 
 final storeProfileProvider = StreamProvider<StoreProfile>(
@@ -128,4 +125,16 @@ final storeProfileProvider = StreamProvider<StoreProfile>(
 /// Apakah wizard setup awal sudah selesai.
 final setupCompletedProvider = FutureProvider<bool>(
   (ref) => ref.watch(settingsRepositoryProvider).isSetupCompleted(),
+);
+
+/// Pengaturan umum lama peringatan ED (hari).
+final nearExpiryDaysProvider = StreamProvider<int>(
+  (ref) => ref
+      .watch(settingsRepositoryProvider)
+      .watchAll()
+      .map(
+        (m) =>
+            int.tryParse(m[SettingKeys.nearExpiryDays] ?? '') ??
+            defaultNearExpiryDays,
+      ),
 );

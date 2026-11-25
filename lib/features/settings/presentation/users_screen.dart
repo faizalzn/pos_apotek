@@ -122,7 +122,7 @@ class UsersScreen extends ConsumerWidget {
           ),
         ],
       ),
-    ).whenComplete(controller.dispose);
+    );
   }
 
   @override
@@ -134,9 +134,9 @@ class UsersScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Pengguna')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const _AddUserScreen()),
-        ),
+        onPressed: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const _AddUserScreen())),
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Tambah pengguna'),
       ),
@@ -180,7 +180,9 @@ class UsersScreen extends ConsumerWidget {
                       : TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 ),
                 subtitle: Text(
-                  user.isActive ? user.role.label : '${user.role.label} · Nonaktif',
+                  user.isActive
+                      ? user.role.label
+                      : '${user.role.label} · Nonaktif',
                 ),
                 trailing: const Icon(Icons.more_vert),
               ),

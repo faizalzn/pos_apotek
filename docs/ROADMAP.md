@@ -7,7 +7,7 @@ Urutan pengerjaan:
 1. ✅ **Fondasi** — database, login PIN (Pemilik/Kasir), wizard setup awal
    - ✅ Kode darurat developer & saran Pemilik kedua
 2. ✅ **Produk** — CRUD produk, foto, satuan bertingkat, tambah stok (batch + ED)
-3. **Kasir** — cari/scan, keranjang, pembayaran tunai, kembalian
+3. ✅ **Kasir** — cari/scan, keranjang, diskon, tunai/QRIS manual, riwayat & pembatalan
 3b. **Backup & restore** — dimajukan agar data aman sebelum dipakai berjualan
 4. **QRIS dinamis** — scan QRIS statis merchant, sisipkan nominal
 5. **Struk** — printer ESC/POS (Bluetooth/USB/WiFi), PDF/gambar, kirim via WhatsApp

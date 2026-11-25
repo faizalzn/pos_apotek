@@ -5,6 +5,8 @@ import '../../../core/widgets/common.dart';
 import '../../auth/application/session_controller.dart';
 import '../../products/presentation/product_list_screen.dart';
 import '../../products/presentation/stock_alerts_screen.dart';
+import '../../sales/presentation/cashier_screen.dart';
+import '../../sales/presentation/sales_history_screen.dart';
 import '../../settings/data/settings_repository.dart';
 import '../../settings/presentation/settings_screen.dart';
 
@@ -31,10 +33,17 @@ class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   static final _items = <_MenuItem>[
-    const _MenuItem(
+    _MenuItem(
       icon: Icons.point_of_sale_rounded,
       label: 'Kasir',
       description: 'Catat penjualan',
+      open: (_) => const CashierScreen(),
+    ),
+    _MenuItem(
+      icon: Icons.receipt_long_rounded,
+      label: 'Riwayat',
+      description: 'Transaksi per hari',
+      open: (_) => const SalesHistoryScreen(),
     ),
     _MenuItem(
       icon: Icons.medication_rounded,
@@ -148,8 +157,9 @@ class _MenuTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 26,
-                backgroundColor:
-                    available ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+                backgroundColor: available
+                    ? scheme.primaryContainer
+                    : scheme.surfaceContainerHighest,
                 child: Icon(
                   item.icon,
                   size: 28,
@@ -168,8 +178,9 @@ class _MenuTile extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 available ? item.description : 'Segera hadir',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: scheme.onSurfaceVariant),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),

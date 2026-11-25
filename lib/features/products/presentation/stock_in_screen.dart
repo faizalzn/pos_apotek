@@ -44,6 +44,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
   ProductUnit _selectedUnit(ProductSummary p) =>
       p.units.where((u) => u.id == _unitId).firstOrNull ?? p.units.last;
 
+  ExpiryStatus _expiryStatus(ProductSummary p) =>
+      expiryStatusOf(_expiry, DateTime.now(), windowDays: p.nearExpiryDays);
+
   Future<void> _pickExpiry() async {
     final picked = await pickExpiryMonth(context, initial: _expiry);
     if (picked != null) {
@@ -65,7 +68,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
     final unit = _selectedUnit(p);
     setState(() => _saving = true);
     try {
-      await ref.read(productRepositoryProvider).receiveStock(
+      await ref
+          .read(productRepositoryProvider)
+          .receiveStock(
             productId: p.product.id,
             unit: unit,
             quantity: parseNumber(_qty.text),
@@ -126,11 +131,19 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       photoFile: p.product.photoFile,
                       drugClass: p.product.drugClass,
                     ),
-                    title: Text(p.product.name, style: theme.textTheme.titleMedium),
-                    subtitle: Text('Stok sekarang: ${formatStock(p.stock, p.units)}'),
+                    title: Text(
+                      p.product.name,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    subtitle: Text(
+                      'Stok sekarang: ${formatStock(p.stock, p.units)}',
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  Text('Satuan yang diterima', style: theme.textTheme.titleSmall),
+                  Text(
+                    'Satuan yang diterima',
+                    style: theme.textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -166,7 +179,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                           textAlign: TextAlign.center,
                           style: theme.textTheme.headlineSmall,
                           keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
                             labelText: 'Jumlah',
@@ -179,7 +194,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       const SizedBox(width: 8),
                       IconButton.filledTonal(
                         tooltip: 'Tambah',
-                        onPressed: () => setState(() => _qty.text = '${qty + 1}'),
+                        onPressed: () =>
+                            setState(() => _qty.text = '${qty + 1}'),
                         icon: const Icon(Icons.add),
                       ),
                     ],
@@ -194,7 +210,10 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                       ),
                     ),
                   const SizedBox(height: 20),
-                  Text('Tanggal kedaluwarsa (ED)', style: theme.textTheme.titleSmall),
+                  Text(
+                    'Tanggal kedaluwarsa (ED)',
+                    style: theme.textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     key: const Key('pick-expiry'),
@@ -216,14 +235,13 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     ),
                   if (_expiry != null &&
                       !_noExpiry &&
-                      expiryStatusOf(_expiry, DateTime.now()) != ExpiryStatus.ok)
+                      _expiryStatus(p) != ExpiryStatus.ok)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: StatusChip(
-                        label: expiryStatusOf(_expiry, DateTime.now()) ==
-                                ExpiryStatus.expired
+                        label: _expiryStatus(p) == ExpiryStatus.expired
                             ? 'Tanggal ini sudah lewat — periksa kembali'
-                            : 'ED kurang dari 3 bulan lagi',
+                            : 'ED kurang dari ${nearExpiryLabel(p.nearExpiryDays)} lagi',
                         color: soonColor,
                         icon: Icons.warning_amber_rounded,
                       ),
@@ -233,7 +251,9 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     contentPadding: EdgeInsets.zero,
                     controlAffinity: ListTileControlAffinity.leading,
                     onChanged: (v) => setState(() => _noExpiry = v ?? false),
-                    title: const Text('Barang ini tidak punya tanggal kedaluwarsa'),
+                    title: const Text(
+                      'Barang ini tidak punya tanggal kedaluwarsa',
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TextFormField(
@@ -241,7 +261,8 @@ class _StockInScreenState extends ConsumerState<StockInScreen> {
                     textCapitalization: TextCapitalization.characters,
                     decoration: const InputDecoration(
                       labelText: 'No. batch (opsional)',
-                      hintText: 'Tertulis "Batch" / "Lot" / "No. Reg" di kemasan',
+                      hintText:
+                          'Tertulis "Batch" / "Lot" / "No. Reg" di kemasan',
                     ),
                   ),
                   if (isOwner) ...[

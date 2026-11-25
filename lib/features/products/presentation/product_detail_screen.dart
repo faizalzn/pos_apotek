@@ -25,7 +25,8 @@ class ProductDetailScreen extends ConsumerWidget {
     final isOwner = ref.watch(isOwnerProvider);
 
     return product.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('$e'))),
       data: (p) {
         if (p == null) {
@@ -51,12 +52,17 @@ class ProductDetailScreen extends ConsumerWidget {
               PopupMenuButton<String>(
                 onSelected: (v) => _menu(context, ref, p, v),
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'history', child: Text('Riwayat stok')),
+                  const PopupMenuItem(
+                    value: 'history',
+                    child: Text('Riwayat stok'),
+                  ),
                   if (isOwner)
                     PopupMenuItem(
                       value: 'archive',
                       child: Text(
-                        p.product.isActive ? 'Arsipkan produk' : 'Aktifkan kembali',
+                        p.product.isActive
+                            ? 'Arsipkan produk'
+                            : 'Aktifkan kembali',
                       ),
                     ),
                 ],
@@ -89,9 +95,7 @@ class ProductDetailScreen extends ConsumerWidget {
     switch (value) {
       case 'history':
         await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => _MovementsScreen(summary: p),
-          ),
+          MaterialPageRoute<void>(builder: (_) => _MovementsScreen(summary: p)),
         );
       case 'archive':
         final archive = p.product.isActive;
@@ -99,7 +103,8 @@ class ProductDetailScreen extends ConsumerWidget {
           final ok = await confirm(
             context,
             title: 'Arsipkan ${p.product.name}?',
-            message: 'Produk tidak akan tampil di kasir dan daftar produk. '
+            message:
+                'Produk tidak akan tampil di kasir dan daftar produk. '
                 'Riwayatnya tetap tersimpan dan bisa diaktifkan kembali.',
             confirmLabel: 'Arsipkan',
           );
@@ -109,7 +114,10 @@ class ProductDetailScreen extends ConsumerWidget {
             .read(productRepositoryProvider)
             .setArchived(p.product.id, archived: archive);
         if (context.mounted) {
-          showMessage(context, archive ? 'Produk diarsipkan' : 'Produk aktif kembali');
+          showMessage(
+            context,
+            archive ? 'Produk diarsipkan' : 'Produk aktif kembali',
+          );
         }
     }
   }
@@ -143,15 +151,15 @@ class _Body extends ConsumerWidget {
                     onTap: p.photoFile == null
                         ? null
                         : () => showDialog<void>(
-                              context: context,
-                              builder: (_) => Dialog(
-                                child: ProductPhoto(
-                                  photoFile: p.photoFile,
-                                  drugClass: p.drugClass,
-                                  size: 320,
-                                ),
+                            context: context,
+                            builder: (_) => Dialog(
+                              child: ProductPhoto(
+                                photoFile: p.photoFile,
+                                drugClass: p.drugClass,
+                                size: 320,
                               ),
                             ),
+                          ),
                     child: ProductPhoto(
                       photoFile: p.photoFile,
                       drugClass: p.drugClass,
@@ -174,7 +182,10 @@ class _Body extends ConsumerWidget {
                         ],
                         if (!p.isActive) ...[
                           const SizedBox(height: 6),
-                          const StatusChip(label: 'Diarsipkan', color: Colors.grey),
+                          const StatusChip(
+                            label: 'Diarsipkan',
+                            color: Colors.grey,
+                          ),
                         ],
                       ],
                     ),
@@ -192,7 +203,9 @@ class _Body extends ConsumerWidget {
                     ),
                     title: Text(
                       'Perlu resep dokter',
-                      style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                      style: TextStyle(
+                        color: theme.colorScheme.onErrorContainer,
+                      ),
                     ),
                   ),
                 ),
@@ -250,7 +263,9 @@ class _Body extends ConsumerWidget {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Harga beli rata-rata'),
                         subtitle: Text('per ${summary.baseUnit.name}'),
-                        trailing: Text(formatRupiah(summary.averageCost.round())),
+                        trailing: Text(
+                          formatRupiah(summary.averageCost.round()),
+                        ),
                       ),
                   ],
                 ),
@@ -287,19 +302,19 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              child,
-            ],
-          ),
-        ),
-      );
+    margin: const EdgeInsets.only(bottom: 12),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    ),
+  );
 }
 
 class _BatchTile extends ConsumerWidget {
@@ -317,7 +332,7 @@ class _BatchTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = expiryStatusOf(batch.expiryDate, now);
+    final status = summary.batchStatus(batch, now);
     final color = switch (status) {
       ExpiryStatus.expired => expiredColor,
       ExpiryStatus.soon => soonColor,
@@ -330,8 +345,8 @@ class _BatchTile extends ConsumerWidget {
         status == ExpiryStatus.expired
             ? Icons.error_outline
             : status == ExpiryStatus.soon
-                ? Icons.schedule
-                : Icons.inventory_2_outlined,
+            ? Icons.schedule
+            : Icons.inventory_2_outlined,
         color: color,
       ),
       title: Text(
@@ -390,7 +405,9 @@ class _BatchTile extends ConsumerWidget {
       title: action == 'adjust' ? 'Jumlah sebenarnya' : 'Jumlah yang dibuang',
       unitName: base,
       initial: batch.quantity,
-      noteHint: action == 'adjust' ? 'mis. hasil hitung ulang' : 'mis. kedaluwarsa / kemasan rusak',
+      noteHint: action == 'adjust'
+          ? 'mis. hasil hitung ulang'
+          : 'mis. kedaluwarsa / kemasan rusak',
     );
     if (result == null || !context.mounted) return;
 
@@ -445,7 +462,10 @@ Future<({int quantity, String note})?> _askQuantity(
           const SizedBox(height: 12),
           TextField(
             controller: note,
-            decoration: InputDecoration(labelText: 'Alasan', hintText: noteHint),
+            decoration: InputDecoration(
+              labelText: 'Alasan',
+              hintText: noteHint,
+            ),
           ),
         ],
       ),
@@ -455,18 +475,15 @@ Future<({int quantity, String note})?> _askQuantity(
           child: const Text('Batal'),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(
-            context,
-            (quantity: parseNumber(qty.text), note: note.text),
-          ),
+          onPressed: () => Navigator.pop(context, (
+            quantity: parseNumber(qty.text),
+            note: note.text,
+          )),
           child: const Text('Simpan'),
         ),
       ],
     ),
-  ).whenComplete(() {
-    qty.dispose();
-    note.dispose();
-  });
+  );
 }
 
 class _MovementsScreen extends ConsumerWidget {
@@ -493,8 +510,12 @@ class _MovementsScreen extends ConsumerWidget {
                   final positive = m.quantity > 0;
                   return ListTile(
                     leading: Icon(
-                      positive ? Icons.south_west_rounded : Icons.north_east_rounded,
-                      color: positive ? const Color(0xFF2E7D32) : theme.colorScheme.error,
+                      positive
+                          ? Icons.south_west_rounded
+                          : Icons.north_east_rounded,
+                      color: positive
+                          ? const Color(0xFF2E7D32)
+                          : theme.colorScheme.error,
                     ),
                     title: Text(m.type.label),
                     subtitle: Text(
@@ -509,7 +530,9 @@ class _MovementsScreen extends ConsumerWidget {
                     trailing: Text(
                       '${positive ? '+' : '−'}${formatStock(m.quantity.abs(), summary.units)}',
                       style: theme.textTheme.titleSmall?.copyWith(
-                        color: positive ? const Color(0xFF2E7D32) : theme.colorScheme.error,
+                        color: positive
+                            ? const Color(0xFF2E7D32)
+                            : theme.colorScheme.error,
                       ),
                     ),
                   );
