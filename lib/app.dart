@@ -77,3 +77,18 @@ class AppGate extends ConsumerWidget {
     );
   }
 }
+
+/// Memulai ulang aplikasi: database ditutup, [whileClosed] dijalankan, lalu
+/// semua dibuka kembali dari awal (layar login). Tidak tersedia di tes widget
+/// yang memakai `ProviderScope` langsung.
+class AppRestart extends InheritedWidget {
+  const AppRestart({super.key, required this.restart, required super.child});
+
+  final Future<void> Function(Future<void> Function() whileClosed) restart;
+
+  static AppRestart? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AppRestart>();
+
+  @override
+  bool updateShouldNotify(AppRestart oldWidget) => restart != oldWidget.restart;
+}

@@ -9,9 +9,9 @@ enum UserRole {
   cashier;
 
   String get label => switch (this) {
-        UserRole.owner => 'Pemilik',
-        UserRole.cashier => 'Kasir',
-      };
+    UserRole.owner => 'Pemilik',
+    UserRole.cashier => 'Kasir',
+  };
 }
 
 /// Pengguna yang bisa masuk ke aplikasi dengan PIN.
@@ -72,12 +72,12 @@ enum DrugClass {
   nonObat;
 
   String get label => switch (this) {
-        DrugClass.bebas => 'Obat Bebas',
-        DrugClass.bebasTerbatas => 'Obat Bebas Terbatas',
-        DrugClass.keras => 'Obat Keras',
-        DrugClass.narkotikaPsikotropika => 'Narkotika / Psikotropika',
-        DrugClass.nonObat => 'Non-obat',
-      };
+    DrugClass.bebas => 'Obat Bebas',
+    DrugClass.bebasTerbatas => 'Obat Bebas Terbatas',
+    DrugClass.keras => 'Obat Keras',
+    DrugClass.narkotikaPsikotropika => 'Narkotika / Psikotropika',
+    DrugClass.nonObat => 'Non-obat',
+  };
 
   bool get requiresPrescription =>
       this == DrugClass.keras || this == DrugClass.narkotikaPsikotropika;
@@ -102,6 +102,10 @@ class Products extends Table {
 
   /// Batas stok menipis, dalam satuan terkecil. 0 = tidak diperingatkan.
   IntColumn get minStock => integer().withDefault(const Constant(0))();
+
+  /// Berapa hari sebelum ED peringatan "hampir kedaluwarsa" muncul.
+  /// Kosong = ikuti pengaturan umum.
+  IntColumn get nearExpiryDays => integer().nullable()();
 
   /// Produk yang diarsipkan tidak tampil di kasir, tetapi riwayatnya tetap ada.
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
@@ -161,14 +165,16 @@ enum StockMovementType {
   stockIn,
   sale,
   adjustment,
-  disposal;
+  disposal,
+  saleVoid;
 
   String get label => switch (this) {
-        StockMovementType.stockIn => 'Stok masuk',
-        StockMovementType.sale => 'Terjual',
-        StockMovementType.adjustment => 'Koreksi stok',
-        StockMovementType.disposal => 'Dibuang (ED/rusak)',
-      };
+    StockMovementType.stockIn => 'Stok masuk',
+    StockMovementType.sale => 'Terjual',
+    StockMovementType.saleVoid => 'Transaksi dibatalkan',
+    StockMovementType.adjustment => 'Koreksi stok',
+    StockMovementType.disposal => 'Dibuang (ED/rusak)',
+  };
 }
 
 /// Catatan setiap perubahan stok, untuk penelusuran.
@@ -183,6 +189,94 @@ class StockMovements extends Table {
   IntColumn get quantity => integer()();
   TextColumn get note => text().withDefault(const Constant(''))();
   TextColumn get userId => text().nullable().references(Users, #id)();
+
+  /// Transaksi penjualan terkait (untuk jenis `sale` & `saleVoid`).
+  TextColumn get saleId => text().nullable().references(Sales, #id)();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+enum PaymentMethod {
+  cash,
+  qris;
+
+  String get label => switch (this) {
+    PaymentMethod.cash => 'Tunai',
+    PaymentMethod.qris => 'QRIS',
+  };
+}
+
+enum SaleStatus { completed, voided }
+
+/// Satu transaksi penjualan. Semua nominal dalam rupiah (tanpa pembulatan).
+@DataClassName('Sale')
+class Sales extends Table {
+  TextColumn get id => text()();
+
+  /// Nomor yang mudah dibaca, mis. `251126-0007` (tanggal + urutan hari itu).
+  TextColumn get number => text()();
+  TextColumn get cashierId => text().references(Users, #id)();
+
+  /// Jumlah harga × qty sebelum diskon apa pun.
+  IntColumn get subtotal => integer()();
+
+  /// Total diskon per barang.
+  IntColumn get itemDiscount => integer().withDefault(const Constant(0))();
+
+  /// Diskon untuk total belanja.
+  IntColumn get discount => integer().withDefault(const Constant(0))();
+
+  /// Yang dibayar pelanggan = subtotal − itemDiscount − discount.
+  IntColumn get total => integer()();
+  TextColumn get paymentMethod => textEnum<PaymentMethod>()();
+
+  /// Uang yang diterima (tunai). Untuk QRIS sama dengan [total].
+  IntColumn get amountPaid => integer()();
+  IntColumn get change => integer().withDefault(const Constant(0))();
+
+  /// Total harga beli barang terjual (untuk laporan laba).
+  RealColumn get costTotal => real().withDefault(const Constant(0))();
+  TextColumn get status => textEnum<SaleStatus>()();
+  TextColumn get voidReason => text().withDefault(const Constant(''))();
+  TextColumn get voidedBy => text().nullable().references(Users, #id)();
+  DateTimeColumn get voidedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Barang dalam transaksi. Nama, satuan, dan harga disalin saat transaksi
+/// agar riwayat tidak berubah bila produk diubah kemudian.
+@DataClassName('SaleItem')
+class SaleItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get saleId => text().references(Sales, #id)();
+  TextColumn get productId => text().references(Products, #id)();
+
+  /// ID satuan saat transaksi (tanpa foreign key; satuan bisa dihapus kelak).
+  TextColumn get unitId => text().nullable()();
+  TextColumn get productName => text()();
+  TextColumn get unitName => text()();
+  IntColumn get multiplier => integer()();
+  IntColumn get quantity => integer()();
+
+  /// Harga jual normal per satuan saat transaksi.
+  IntColumn get listPrice => integer()();
+
+  /// Harga yang dipakai (bisa diubah Pemilik).
+  IntColumn get unitPrice => integer()();
+
+  /// Diskon untuk baris ini (rupiah).
+  IntColumn get discount => integer().withDefault(const Constant(0))();
+
+  /// unitPrice × quantity − discount.
+  IntColumn get lineTotal => integer()();
+  RealColumn get costTotal => real().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

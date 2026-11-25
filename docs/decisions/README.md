@@ -14,3 +14,4 @@ Keputusan yang diganti tidak dihapus — statusnya diubah menjadi "Digantikan ol
 | [0007](0007-stok-per-batch-fefo.md) | Stok per batch & tanggal kedaluwarsa (FEFO) | Diterima |
 | [0008](0008-rahasia-di-luar-repo.md) | Rahasia di luar repo, disisipkan saat build | Diterima |
 | [0009](0009-kode-darurat-developer.md) | Kode darurat developer (Ed25519) | Diterima |
+| [0010](0010-backup-zip-lokal.md) | Backup .zip disimpan pengguna di luar HP | Diterima |

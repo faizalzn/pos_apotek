@@ -18,7 +18,7 @@ Dirancang **offline-first** dan **mudah dipakai oleh orang awam**.
 - Laporan harian & per shift
 - Notifikasi Telegram ke pemilik (per transaksi & ringkasan tutup shift)
 - Impor produk dari Excel/CSV dengan pencocokan kolom otomatis
-- Backup & restore
+- Backup ke Google Drive / WhatsApp / flashdisk, cadangan harian otomatis, pulihkan (juga ke HP baru)
 
 Rencana lengkap: [docs/ROADMAP.md](docs/ROADMAP.md)
 

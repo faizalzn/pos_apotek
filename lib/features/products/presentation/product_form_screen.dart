@@ -7,6 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/format.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/data/user_repository.dart' show UserRuleException;
+import '../../settings/data/settings_repository.dart';
 import '../data/photo_store.dart';
 import '../data/product_models.dart';
 import '../data/product_repository.dart';
@@ -20,13 +21,18 @@ const _baseUnitSuggestions = [
 const _packUnitSuggestions = ['Strip', 'Blister', 'Box', 'Dus', 'Lusin'];
 
 class _UnitRow {
-  _UnitRow({this.id, String name = '', int? multiplier, int? price, String? barcode})
-      : name = TextEditingController(text: name),
-        multiplier = TextEditingController(text: multiplier?.toString() ?? ''),
-        price = TextEditingController(
-          text: price == null ? '' : formatNumber(price),
-        ),
-        barcode = TextEditingController(text: barcode ?? '');
+  _UnitRow({
+    this.id,
+    String name = '',
+    int? multiplier,
+    int? price,
+    String? barcode,
+  }) : name = TextEditingController(text: name),
+       multiplier = TextEditingController(text: multiplier?.toString() ?? ''),
+       price = TextEditingController(
+         text: price == null ? '' : formatNumber(price),
+       ),
+       barcode = TextEditingController(text: barcode ?? '');
 
   final String? id;
   final TextEditingController name;
@@ -61,6 +67,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   final _categoryFocus = FocusNode();
   final _minStock = TextEditingController();
   DrugClass _drugClass = DrugClass.bebas;
+  int? _nearExpiryDays;
   late final _UnitRow _base;
   final _packs = <_UnitRow>[];
 
@@ -70,6 +77,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   bool _saving = false;
   List<String> _categories = const [];
   PhotoStore? _store;
+  int _defaultExpiryDays = defaultNearExpiryDays;
 
   bool get _isEdit => widget.existing != null;
 
@@ -85,6 +93,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _generic.text = p.genericName;
       _category.text = p.category;
       _drugClass = p.drugClass;
+      _nearExpiryDays = p.nearExpiryDays;
       _minStock.text = p.minStock == 0 ? '' : '${p.minStock}';
       _originalPhoto = _photo = p.photoFile;
       final base = e.baseUnit;
@@ -108,6 +117,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       }
     }
     ref.read(photoStoreProvider.future).then((s) => _store = s);
+    ref.read(settingsRepositoryProvider).get(SettingKeys.nearExpiryDays).then((
+      v,
+    ) {
+      final days = int.tryParse(v ?? '');
+      if (days != null && mounted) setState(() => _defaultExpiryDays = days);
+    });
     ref.read(productRepositoryProvider).categories().then((c) {
       if (mounted) setState(() => _categories = c);
     });
@@ -176,7 +191,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       _setPhoto(name);
     } on PlatformException catch (e) {
       if (mounted) {
-        showMessage(context, 'Foto tidak bisa diambil: ${e.message}', error: true);
+        showMessage(
+          context,
+          'Foto tidak bisa diambil: ${e.message}',
+          error: true,
+        );
       }
     }
   }
@@ -196,30 +215,31 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   }
 
   ProductInput _input() => ProductInput(
-        name: _name.text,
-        genericName: _generic.text,
-        category: _category.text,
-        drugClass: _drugClass,
-        minStock: parseNumber(_minStock.text),
-        photoFile: _photo,
-        units: [
-          UnitInput(
-            id: _base.id,
-            name: _base.name.text,
-            multiplier: 1,
-            sellPrice: parseNumber(_base.price.text),
-            barcode: _base.barcode.text,
-          ),
-          for (final r in _packs)
-            UnitInput(
-              id: r.id,
-              name: r.name.text,
-              multiplier: parseNumber(r.multiplier.text),
-              sellPrice: parseNumber(r.price.text),
-              barcode: r.barcode.text,
-            ),
-        ],
-      );
+    name: _name.text,
+    genericName: _generic.text,
+    category: _category.text,
+    drugClass: _drugClass,
+    minStock: parseNumber(_minStock.text),
+    nearExpiryDays: _nearExpiryDays,
+    photoFile: _photo,
+    units: [
+      UnitInput(
+        id: _base.id,
+        name: _base.name.text,
+        multiplier: 1,
+        sellPrice: parseNumber(_base.price.text),
+        barcode: _base.barcode.text,
+      ),
+      for (final r in _packs)
+        UnitInput(
+          id: r.id,
+          name: r.name.text,
+          multiplier: parseNumber(r.multiplier.text),
+          sellPrice: parseNumber(r.price.text),
+          barcode: r.barcode.text,
+        ),
+    ],
+  );
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -266,8 +286,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final baseName =
-        _base.name.text.trim().isEmpty ? 'satuan terkecil' : _base.name.text.trim();
+    final baseName = _base.name.text.trim().isEmpty
+        ? 'satuan terkecil'
+        : _base.name.text.trim();
 
     return Scaffold(
       appBar: AppBar(title: Text(_isEdit ? 'Ubah Produk' : 'Tambah Produk')),
@@ -315,7 +336,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     Center(
                       child: TextButton(
                         onPressed: _pickPhoto,
-                        child: Text(_photo == null ? 'Tambah foto (opsional)' : 'Ganti foto'),
+                        child: Text(
+                          _photo == null
+                              ? 'Tambah foto (opsional)'
+                              : 'Ganti foto',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -346,36 +371,47 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       focusNode: _categoryFocus,
                       optionsBuilder: (value) => _categories.where(
                         (c) =>
-                            c.toLowerCase().contains(value.text.toLowerCase()) &&
+                            c.toLowerCase().contains(
+                              value.text.toLowerCase(),
+                            ) &&
                             c != value.text,
                       ),
-                      fieldViewBuilder: (context, controller, focus, onSubmit) =>
-                          TextFormField(
-                        controller: controller,
-                        focusNode: focus,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(
-                          labelText: 'Kategori',
-                          hintText: 'mis. Demam & Nyeri, Vitamin, Batuk',
-                        ),
-                      ),
-                      optionsViewBuilder: (context, onSelected, options) => Align(
-                        alignment: Alignment.topLeft,
-                        child: Material(
-                          elevation: 4,
-                          borderRadius: BorderRadius.circular(12),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 220, maxWidth: 400),
-                            child: ListView(
-                              shrinkWrap: true,
-                              children: [
-                                for (final o in options)
-                                  ListTile(title: Text(o), onTap: () => onSelected(o)),
-                              ],
+                      fieldViewBuilder:
+                          (context, controller, focus, onSubmit) =>
+                              TextFormField(
+                                controller: controller,
+                                focusNode: focus,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: const InputDecoration(
+                                  labelText: 'Kategori',
+                                  hintText:
+                                      'mis. Demam & Nyeri, Vitamin, Batuk',
+                                ),
+                              ),
+                      optionsViewBuilder: (context, onSelected, options) =>
+                          Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4,
+                              borderRadius: BorderRadius.circular(12),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 220,
+                                  maxWidth: 400,
+                                ),
+                                child: ListView(
+                                  shrinkWrap: true,
+                                  children: [
+                                    for (final o in options)
+                                      ListTile(
+                                        title: Text(o),
+                                        onTap: () => onSelected(o),
+                                      ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<DrugClass>(
@@ -397,7 +433,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         ),
                       ),
                     const SizedBox(height: 28),
-                    Text('Satuan & harga jual', style: theme.textTheme.titleLarge),
+                    Text(
+                      'Satuan & harga jual',
+                      style: theme.textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 4),
                     const Text(
                       'Mulai dari satuan terkecil yang bisa dijual eceran. '
@@ -411,7 +450,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     OutlinedButton.icon(
                       onPressed: () => setState(() => _packs.add(_UnitRow())),
                       icon: const Icon(Icons.add),
-                      label: const Text('Tambah satuan kemasan (Strip, Box, ...)'),
+                      label: const Text(
+                        'Tambah satuan kemasan (Strip, Box, ...)',
+                      ),
                     ),
                     const SizedBox(height: 28),
                     TextFormField(
@@ -422,14 +463,41 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         labelText: 'Peringatan stok menipis',
                         hintText: 'Kosongkan bila tidak perlu',
                         suffixText: baseName,
-                        helperText:
-                            'Muncul peringatan bila stok sama atau kurang dari angka ini',
+                        helperText: 'Muncul peringatan bila stok sama atau kurang dari angka ini',
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int?>(
+                      initialValue: _nearExpiryDays,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Peringatan hampir kedaluwarsa',
+                        helperText:
+                            'Kapan mulai diingatkan sebelum ED. Obat yang jarang '
+                            'laku sebaiknya lebih awal.',
+                        helperMaxLines: 2,
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text(
+                            'Ikuti pengaturan umum (${nearExpiryLabel(_defaultExpiryDays)})',
+                          ),
+                        ),
+                        for (final e in nearExpiryChoices.entries)
+                          DropdownMenuItem(
+                            value: e.key,
+                            child: Text('${e.value} sebelum ED'),
+                          ),
+                      ],
+                      onChanged: (v) => setState(() => _nearExpiryDays = v),
                     ),
                     const SizedBox(height: 28),
                     FilledButton(
                       onPressed: _saving ? null : _save,
-                      child: Text(_isEdit ? 'Simpan perubahan' : 'Simpan produk'),
+                      child: Text(
+                        _isEdit ? 'Simpan perubahan' : 'Simpan produk',
+                      ),
                     ),
                   ],
                 ),
@@ -441,7 +509,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     );
   }
 
-  Widget _unitCard(_UnitRow row, {required bool isBase, required String baseName}) {
+  Widget _unitCard(
+    _UnitRow row, {
+    required bool isBase,
+    required String baseName,
+  }) {
     final theme = Theme.of(context);
     final suggestions = isBase ? _baseUnitSuggestions : _packUnitSuggestions;
     return Card(
@@ -495,7 +567,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     controller: row.name,
                     textCapitalization: TextCapitalization.words,
                     onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(labelText: 'Nama satuan *'),
+                    decoration: const InputDecoration(
+                      labelText: 'Nama satuan *',
+                    ),
                     validator: (v) =>
                         (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
                   ),
@@ -507,7 +581,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         labelText: 'Isi *',
-                        prefixText: '1 ${row.name.text.trim().isEmpty ? 'kemasan' : row.name.text.trim()} = ',
+                        prefixText:
+                            '1 ${row.name.text.trim().isEmpty ? 'kemasan' : row.name.text.trim()} = ',
                         suffixText: baseName,
                       ),
                       validator: (v) =>

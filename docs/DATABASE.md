@@ -10,7 +10,7 @@ Konvensi (ADR-0001):
 - Setiap tabel memiliki `updated_at`.
 - Tanggal disimpan sebagai teks **ISO-8601** (lihat `build.yaml`).
 
-Versi skema saat ini: **2**.
+Versi skema saat ini: **3**.
 
 ## Diagram
 
@@ -41,6 +41,7 @@ erDiagram
         TEXT drug_class "bebas | bebasTerbatas | keras | narkotikaPsikotropika | nonObat"
         TEXT photo_file "nama file di folder product_photos/"
         INT min_stock "satuan terkecil; 0 = tanpa peringatan"
+        INT near_expiry_days "nullable; null = ikut pengaturan umum"
         BOOL is_active "false = diarsipkan"
         TEXT created_at
         TEXT updated_at
@@ -70,10 +71,47 @@ erDiagram
         TEXT id PK
         TEXT product_id FK
         TEXT batch_id FK
-        TEXT type "stockIn | sale | adjustment | disposal"
+        TEXT type "stockIn | sale | adjustment | disposal | saleVoid"
         INT quantity "+ masuk / − keluar"
         TEXT note
         TEXT user_id FK "nullable"
+        TEXT sale_id FK "nullable; terisi untuk sale & saleVoid"
+        TEXT created_at
+        TEXT updated_at
+    }
+    sales {
+        TEXT id PK
+        TEXT number "yyMMdd-NNNN, urut per hari"
+        TEXT cashier_id FK
+        INT subtotal "harga × jumlah, sebelum diskon"
+        INT item_discount "jumlah diskon per barang"
+        INT discount "diskon total belanja"
+        INT total "subtotal − item_discount − discount (tanpa pembulatan)"
+        TEXT payment_method "cash | qris"
+        INT amount_paid
+        INT change
+        REAL cost_total "harga beli FEFO; untuk laba"
+        TEXT status "completed | voided"
+        TEXT void_reason "nullable"
+        TEXT voided_by FK "nullable"
+        TEXT voided_at "nullable"
+        TEXT created_at
+        TEXT updated_at
+    }
+    sale_items {
+        TEXT id PK
+        TEXT sale_id FK
+        TEXT product_id FK
+        TEXT unit_id "tanpa FK; satuan bisa dihapus"
+        TEXT product_name "salinan saat transaksi"
+        TEXT unit_name "salinan saat transaksi"
+        INT multiplier
+        INT quantity "dalam satuan yang dijual"
+        INT list_price "harga normal saat itu"
+        INT unit_price "harga dipakai (bisa diubah Pemilik)"
+        INT discount
+        INT line_total
+        REAL cost_total
         TEXT created_at
         TEXT updated_at
     }
@@ -81,6 +119,9 @@ erDiagram
     products ||--o{ batches : "stoknya"
     batches ||--o{ stock_movements : "riwayat"
     users ||--o{ stock_movements : "dicatat oleh"
+    sales ||--|{ sale_items : "berisi"
+    sales ||--o{ stock_movements : "mengurangi stok"
+    users ||--o{ sales : "kasir"
 ```
 
 ### Aturan stok (ADR-0007)
@@ -96,8 +137,20 @@ erDiagram
   dirata-rata tertimbang.
 - Setiap perubahan stok mencatat satu baris `stock_movements`.
 
+### Aturan transaksi
+
+- Satu transaksi disimpan dalam **satu transaksi database**: bila satu barang gagal
+  (mis. stok habis), tidak ada yang tersimpan.
+- Nama produk, satuan & harga **disalin** ke `sale_items`, jadi riwayat tidak berubah
+  walau produk diubah atau diarsipkan.
+- Ubah harga & diskon hanya oleh **Pemilik** (diperiksa di `SaleService`, bukan hanya
+  di layar).
+- Pembatalan (`voidSale`, hanya Pemilik, alasan wajib) mengembalikan stok ke **batch
+  asal** lewat gerakan `saleVoid`; transaksi tetap ada dengan status `voided`.
+
 Indeks tambahan: `product_units(product_id)`, `product_units(barcode)` unik,
-`batches(product_id, expiry_date)`, `stock_movements(product_id, created_at)`.
+`batches(product_id, expiry_date)`, `stock_movements(product_id, created_at)`,
+`stock_movements(sale_id)`, `sales(created_at)`, `sale_items(sale_id)`.
 
 ## Kunci `app_settings`
 
@@ -110,6 +163,14 @@ Indeks tambahan: `product_units(product_id)`, `product_units(barcode)` unik,
 | `receipt.footer` | Catatan di bawah struk |
 | `auth.recovery_hash` | Hash kode pemulihan Pemilik |
 | `auth.recovery_salt` | Salt kode pemulihan |
+| `stock.near_expiry_days` | Batas peringatan "hampir ED" dalam hari (bawaan 90) |
+| `store.logo_file` | Nama file logo di folder `product_photos/` (ikut backup) |
+| `printer.type` | `none` / `bluetooth` / `network` / `android` |
+| `printer.bt_address`, `printer.bt_name` | Printer Bluetooth terpilih |
+| `printer.host`, `printer.port` | Printer WiFi (port bawaan 9100) |
+| `printer.paper` | `mm58` / `mm80` |
+| `printer.auto_print` | Cetak otomatis setelah transaksi (bawaan `true`) |
+| `receipt.show_logo` | Tampilkan logo di struk (bawaan `true`) |
 
 ## Migrasi
 
@@ -128,3 +189,4 @@ migrasi, agar data yang sudah ada di HP tidak hilang. Alurnya:
 |---|---|
 | 1 | `users`, `app_settings` |
 | 2 | `products`, `product_units`, `batches`, `stock_movements` + indeks |
+| 3 | `sales`, `sale_items`; `products.near_expiry_days`; `stock_movements.sale_id` |

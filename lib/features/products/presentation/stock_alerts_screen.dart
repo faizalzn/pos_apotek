@@ -12,14 +12,30 @@ class StockAlertsScreen extends ConsumerWidget {
   const StockAlertsScreen({super.key});
 
   static const _items = [
-    (ProductFilter.expired, Icons.error_outline, expiredColor,
-        'Segera keluarkan dari rak'),
-    (ProductFilter.nearExpiry, Icons.schedule, soonColor,
-        'Kedaluwarsa dalam 3 bulan — jual lebih dulu'),
-    (ProductFilter.lowStock, Icons.trending_down, lowStockColor,
-        'Saatnya pesan ulang'),
-    (ProductFilter.outOfStock, Icons.remove_shopping_cart_outlined, expiredColor,
-        'Stok kosong'),
+    (
+      ProductFilter.expired,
+      Icons.error_outline,
+      expiredColor,
+      'Segera keluarkan dari rak',
+    ),
+    (
+      ProductFilter.nearExpiry,
+      Icons.schedule,
+      soonColor,
+      'Mendekati tanggal kedaluwarsa — jual lebih dulu',
+    ),
+    (
+      ProductFilter.lowStock,
+      Icons.trending_down,
+      lowStockColor,
+      'Saatnya pesan ulang',
+    ),
+    (
+      ProductFilter.outOfStock,
+      Icons.remove_shopping_cart_outlined,
+      expiredColor,
+      'Stok kosong',
+    ),
   ];
 
   @override
@@ -42,13 +58,18 @@ class StockAlertsScreen extends ConsumerWidget {
                   final count = all.where((p) => filter.matches(p, now)).length;
                   return Card(
                     child: ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       leading: CircleAvatar(
                         backgroundColor: color.withValues(alpha: 0.12),
                         child: Icon(icon, color: color),
                       ),
-                      title: Text(filter.label, style: theme.textTheme.titleMedium),
+                      title: Text(
+                        filter.label,
+                        style: theme.textTheme.titleMedium,
+                      ),
                       subtitle: Text(hint),
                       trailing: Text(
                         '$count',

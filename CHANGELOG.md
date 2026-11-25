@@ -5,6 +5,41 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 ## [Unreleased]
 
 ### Ditambahkan
+- **Struk (langkah 4, dimajukan)**:
+  - Setelah transaksi: **Cetak struk**, **WhatsApp** (ke nomor pelanggan atau pilih
+    kontak), **Bagikan** sebagai gambar/PDF. Cetak otomatis bila printer sudah diatur.
+  - Cetak ulang dari Riwayat (bertanda SALINAN).
+  - Pengaturan → **Printer & struk**: printer thermal Bluetooth atau WiFi (ESC/POS),
+    atau printer lain lewat layanan cetak Android; kertas 58/80 mm; cetak tes.
+  - **Logo apotek** di Data apotek, tampil di struk & ikut backup.
+- **Backup & pulihkan (langkah 3b)** — menu Pengaturan → Backup & pulihkan (Pemilik):
+  - Kirim backup lengkap (data + foto) lewat Google Drive/WhatsApp, atau simpan ke
+    penyimpanan HP/flashdisk.
+  - Pengingat di beranda bila 7 hari belum backup ke luar HP.
+  - Cadangan harian otomatis di HP (7 hari terakhir).
+  - Pulihkan dari file atau dari cadangan otomatis; file diperiksa dulu, data saat ini
+    disimpan sebagai cadangan, lalu aplikasi dibuka ulang.
+  - Wizard setup: **Pulihkan dari backup** untuk pindah ke HP baru.
+- **Kasir (langkah 3)**:
+  - Cari barang atau scan barcode (kamera, atau scanner USB/Bluetooth yang mengetik
+    lalu Enter). Produk dengan beberapa satuan → pilih satuan.
+  - Keranjang: ubah jumlah, cek stok layak jual, peringatan **obat keras perlu resep**.
+  - Di tablet daftar barang & keranjang tampil berdampingan.
+  - Pemilik bisa mengubah harga dan memberi diskon per barang dan/atau diskon total
+    (rupiah atau persen), keduanya opsional. Total tidak dibulatkan.
+  - Pembayaran tunai (uang pas & pecahan cepat, kembalian) atau QRIS (konfirmasi manual).
+  - Stok berkurang otomatis secara FEFO; harga beli tercatat untuk laporan laba.
+  - Riwayat transaksi per hari dan detailnya; Pemilik bisa **membatalkan** transaksi
+    (stok kembali ke batch asal).
+- **Peringatan kedaluwarsa bisa diatur**: pengaturan umum (1–12 bulan, bawaan 3 bulan)
+  dan pengaturan khusus per produk.
+- Database versi 3 dengan migrasi otomatis dari versi 1 & 2.
+
+### Diperbaiki
+- Dialog berisi kolom isian bisa error saat ditutup (controller dibuang sebelum
+  animasi selesai).
+
+### Ditambahkan
 - **Produk (langkah 2)**:
   - Tambah/ubah produk: foto (kamera/galeri), kandungan, kategori, golongan obat
     (dengan warna penanda seperti di kemasan), stok minimum.

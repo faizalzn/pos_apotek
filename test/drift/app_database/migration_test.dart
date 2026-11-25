@@ -9,6 +9,7 @@ import 'generated/schema.dart';
 
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
+import 'generated/schema_v3.dart' as v3;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -100,6 +101,51 @@ void main() {
           expectedNewAppSettingsData,
           await newDb.select(newDb.appSettings).get(),
         );
+      },
+    );
+  });
+
+  test('migration from v2 to v3 keeps products', () async {
+    const ts = '2026-11-25T08:00:00.000';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 2,
+      newVersion: 3,
+      createOld: v2.DatabaseAtV2.new,
+      createNew: v3.DatabaseAtV3.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch.insert(
+          oldDb.products,
+          const v2.ProductsData(
+            id: 'p1',
+            name: 'Paracetamol',
+            genericName: '',
+            category: '',
+            drugClass: 'bebas',
+            photoFile: null,
+            minStock: 10,
+            isActive: 1,
+            createdAt: ts,
+            updatedAt: ts,
+          ),
+        );
+      },
+      validateItems: (newDb) async {
+        expect(await newDb.select(newDb.products).get(), [
+          const v3.ProductsData(
+            id: 'p1',
+            name: 'Paracetamol',
+            genericName: '',
+            category: '',
+            drugClass: 'bebas',
+            photoFile: null,
+            minStock: 10,
+            nearExpiryDays: null,
+            isActive: 1,
+            createdAt: ts,
+            updatedAt: ts,
+          ),
+        ]);
       },
     );
   });
