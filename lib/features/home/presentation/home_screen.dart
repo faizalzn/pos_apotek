@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../core/widgets/common.dart';
 import '../../auth/application/session_controller.dart';
+import '../../products/presentation/product_list_screen.dart';
+import '../../products/presentation/stock_alerts_screen.dart';
 import '../../settings/data/settings_repository.dart';
 import '../../settings/presentation/settings_screen.dart';
 
@@ -34,15 +36,17 @@ class HomeScreen extends ConsumerWidget {
       label: 'Kasir',
       description: 'Catat penjualan',
     ),
-    const _MenuItem(
+    _MenuItem(
       icon: Icons.medication_rounded,
       label: 'Produk',
       description: 'Daftar obat & harga',
+      open: (_) => const ProductListScreen(),
     ),
-    const _MenuItem(
+    _MenuItem(
       icon: Icons.inventory_2_rounded,
       label: 'Stok & ED',
       description: 'Stok menipis, kedaluwarsa',
+      open: (_) => const StockAlertsScreen(),
     ),
     const _MenuItem(
       icon: Icons.schedule_rounded,

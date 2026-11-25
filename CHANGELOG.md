@@ -5,6 +5,23 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 ## [Unreleased]
 
 ### Ditambahkan
+- **Produk (langkah 2)**:
+  - Tambah/ubah produk: foto (kamera/galeri), kandungan, kategori, golongan obat
+    (dengan warna penanda seperti di kemasan), stok minimum.
+  - Satuan bertingkat (mis. Tablet → Strip isi 10 → Box isi 100), harga & barcode
+    per satuan, scan barcode dengan kamera.
+  - Tambah stok per batch dengan ED (pilih bulan & tahun), harga beli opsional
+    (hanya Pemilik), konversi otomatis ke satuan terkecil.
+  - Stok FEFO: batch dengan ED terdekat dijual dulu, batch kedaluwarsa tidak dijual.
+  - Koreksi stok (stock opname) & buang stok ED/rusak, dengan riwayat lengkap.
+  - Daftar produk dengan pencarian (nama, kandungan, barcode) dan filter.
+  - Menu **Stok & ED**: jumlah produk kedaluwarsa, hampir ED (≤ 3 bulan),
+    stok menipis, dan habis.
+  - Arsipkan produk tanpa menghapus riwayat.
+- Database versi 2 dengan migrasi otomatis dari versi 1 (data lama tetap utuh) dan
+  tes migrasi (`drift_dev make-migrations`).
+
+### Ditambahkan
 - **Kode darurat developer**: Pemilik yang lupa PIN dan kehilangan kode pemulihan bisa
   membuat PIN baru lewat kode tantangan → balasan dari developer (Ed25519), tanpa
   kehilangan data. Alat developer: `tool/kode_darurat.dart`. Panduan: `docs/KODE_DARURAT.md`.

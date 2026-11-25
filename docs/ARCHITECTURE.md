@@ -30,6 +30,7 @@ lib/
     ├── setup/                # Wizard setup awal
     ├── auth/                 # Pengguna, PIN, sesi login, kode pemulihan
     ├── home/                 # Beranda (menu utama)
+    ├── products/             # Produk, satuan, stok per batch (FEFO), foto, scan barcode
     └── settings/             # Pengaturan: data apotek, pengguna, ganti PIN
 ```
 
@@ -74,6 +75,8 @@ flutter test
 
 - `test/core/` — PinHasher (dibandingkan dengan `hashlib` Python sebagai referensi)
 - `test/features/` — repository & service dengan SQLite di memori
+- `test/drift/` — migrasi database dari setiap versi lama (dibuat `make-migrations`)
+- `test/products_flow_test.dart` — alur UI produk & stok
 - `test/app_flow_test.dart` — alur lengkap di UI: setup → beranda → keluar → login
 
 ## Kode hasil generate
