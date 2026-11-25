@@ -8,11 +8,11 @@ Urutan pengerjaan:
    - ✅ Kode darurat developer & saran Pemilik kedua
 2. ✅ **Produk** — CRUD produk, foto, satuan bertingkat, tambah stok (batch + ED)
 3. ✅ **Kasir** — cari/scan, keranjang, diskon, tunai/QRIS manual, riwayat & pembatalan
-3b. **Backup & restore** — dimajukan agar data aman sebelum dipakai berjualan
+3b. ✅ **Backup & restore** — kirim ke Drive/WhatsApp, cadangan harian, pemulihan (juga dari wizard)
 4. **QRIS dinamis** — scan QRIS statis merchant, sisipkan nominal
 5. **Struk** — printer ESC/POS (Bluetooth/USB/WiFi), PDF/gambar, kirim via WhatsApp
 6. **Shift & laporan** — buka/tutup shift, selisih kas, laporan harian & per shift
-7. **Notifikasi Telegram** — per transaksi & ringkasan tutup shift
+7. **Notifikasi Telegram** — per transaksi & ringkasan tutup shift, kirim backup otomatis
 8. **Impor** — impor Excel/CSV dengan pemetaan kolom
 
 Setelah langkah 3 aplikasi sudah bisa diuji coba di apotek.

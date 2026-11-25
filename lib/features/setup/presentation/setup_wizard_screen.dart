@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../backup/presentation/backup_screen.dart';
+
 import '../../../core/widgets/common.dart';
 import '../../../core/widgets/pin_pad.dart';
 import '../../../core/widgets/recovery_code_view.dart';
@@ -135,6 +137,17 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
             FilledButton(
               onPressed: () => _go(_Step.store),
               child: const Text('Mulai'),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Pindah dari HP lama atau sudah punya file backup?',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            TextButton.icon(
+              onPressed: () => pickAndRestore(context, ref, fromSetup: true),
+              icon: const Icon(Icons.restore_rounded),
+              label: const Text('Pulihkan dari backup'),
             ),
           ],
         );

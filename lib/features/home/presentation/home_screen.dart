@@ -1,8 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/clock.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/application/session_controller.dart';
+import '../../backup/data/backup_service.dart';
+import '../../backup/presentation/backup_screen.dart';
+import '../../products/data/product_repository.dart';
 import '../../products/presentation/product_list_screen.dart';
 import '../../products/presentation/stock_alerts_screen.dart';
 import '../../sales/presentation/cashier_screen.dart';
@@ -110,6 +114,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const SliverToBoxAdapter(child: _BackupReminder()),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   sliver: SliverGrid.count(
@@ -185,6 +190,68 @@ class _MenuTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Menjalankan cadangan harian otomatis, dan (untuk Pemilik) mengingatkan
+/// bila sudah 7 hari tidak backup ke luar HP.
+class _BackupReminder extends ConsumerStatefulWidget {
+  const _BackupReminder();
+
+  @override
+  ConsumerState<_BackupReminder> createState() => _BackupReminderState();
+}
+
+class _BackupReminderState extends ConsumerState<_BackupReminder> {
+  @override
+  void initState() {
+    super.initState();
+    _runDaily();
+  }
+
+  Future<void> _runDaily() async {
+    try {
+      final service = await ref.read(backupServiceProvider.future);
+      if (await service.runDailyBackupIfDue() != null && mounted) {
+        ref.invalidate(localBackupsProvider);
+      }
+    } on Object catch (e) {
+      // Cadangan otomatis tidak boleh mengganggu pekerjaan kasir.
+      debugPrint('Cadangan harian gagal: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isOwner = ref.watch(isOwnerProvider);
+    final state = ref.watch(backupStateProvider);
+    final hasProducts = ref.watch(productsProvider).value?.isNotEmpty ?? false;
+    final now = ref.watch(clockProvider)();
+    if (!isOwner || !hasProducts || !state.hasValue || !isExportDue(state.value, now)) {
+      return const SizedBox.shrink();
+    }
+    final last = state.value!.lastExportAt;
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Card(
+        color: theme.colorScheme.errorContainer,
+        child: ListTile(
+          key: const Key('backup-reminder'),
+          leading: const Icon(Icons.backup_outlined),
+          title: Text(
+            last == null
+                ? 'Data belum pernah di-backup'
+                : 'Backup terakhir ${daysAgo(last, now)}',
+          ),
+          subtitle: const Text('Simpan backup ke Drive/WhatsApp agar data aman'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
           ),
         ),
       ),

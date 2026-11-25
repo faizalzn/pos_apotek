@@ -30,6 +30,13 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 3;
 
+  Future<void>? _closing;
+
+  /// Aman dipanggil lebih dari sekali (mis. saat aplikasi dimulai ulang
+  /// setelah pemulihan backup).
+  @override
+  Future<void> close() => _closing ??= super.close();
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {
