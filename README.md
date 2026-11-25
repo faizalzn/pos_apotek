@@ -3,7 +3,7 @@
 Aplikasi kasir (Point of Sale) untuk apotek kecil, dibuat dengan Flutter untuk HP dan tablet Android.
 Dirancang **offline-first** dan **mudah dipakai oleh orang awam**.
 
-> Status: **langkah 1 (fondasi) selesai** — setup awal, login PIN, pengguna. Belum siap dipakai berjualan.
+> Status: **langkah 2 (produk) selesai** — setup awal, login PIN, pengguna, produk & stok. Belum siap dipakai berjualan.
 
 ## Fitur (Tahap 1)
 
