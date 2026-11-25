@@ -10,6 +10,7 @@ import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -146,6 +147,40 @@ void main() {
             updatedAt: ts,
           ),
         ]);
+      },
+    );
+  });
+
+  test('migration from v3 to v4 keeps sales (tanpa shift)', () async {
+    const ts = '2026-11-25T08:00:00.000';
+    await verifier.testWithDataIntegrity(
+      oldVersion: 3,
+      newVersion: 4,
+      createOld: v3.DatabaseAtV3.new,
+      createNew: v4.DatabaseAtV4.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch.customStatement(
+          "INSERT INTO users (id, name, role, pin_hash, pin_salt, is_active, "
+          "failed_attempts, created_at, updated_at) VALUES "
+          "('u1', 'Sari', 'owner', 'h', 's', 1, 0, '$ts', '$ts')",
+        );
+        batch.customStatement(
+          "INSERT INTO sales (id, number, cashier_id, subtotal, item_discount, "
+          "discount, total, payment_method, amount_paid, change, cost_total, "
+          "status, void_reason, created_at, updated_at) VALUES "
+          "('s1', '261125-0001', 'u1', 5000, 0, 0, 5000, 'cash', 5000, 0, 2000, "
+          "'completed', '', '$ts', '$ts')",
+        );
+      },
+      validateItems: (newDb) async {
+        final rows = await newDb
+            .customSelect('SELECT id, total, shift_id FROM sales')
+            .get();
+        expect(rows.map((r) => r.data), [
+          {'id': 's1', 'total': 5000, 'shift_id': null},
+        ]);
+        expect(await newDb.select(newDb.shifts).get(), isEmpty);
       },
     );
   });

@@ -76,6 +76,13 @@ class SaleService {
     final paid = method == PaymentMethod.qris ? total : amountPaid;
 
     return _db.transaction(() async {
+      final shift = await (_db.select(_db.shifts)
+            ..where((s) => s.status.equalsValue(ShiftStatus.open))
+            ..limit(1))
+          .getSingleOrNull();
+      if (shift == null) {
+        throw const UserRuleException('Buka shift dulu sebelum berjualan');
+      }
       final now = _now();
       final saleId = _uuid.v4();
       final number = await _nextNumber(now);
@@ -87,6 +94,7 @@ class SaleService {
               id: saleId,
               number: number,
               cashierId: cashier.id,
+              shiftId: Value(shift.id),
               subtotal: cart.subtotal,
               itemDiscount: Value(cart.itemDiscount),
               discount: Value(cart.discount),

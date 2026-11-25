@@ -100,7 +100,7 @@ void main() {
       final manifest = jsonDecode(
         utf8.decode(archive.findFile('manifest.json')!.content),
       );
-      expect(manifest['schemaVersion'], 3);
+      expect(manifest['schemaVersion'], db.schemaVersion);
 
       final staged = await backup.stage(file);
       expect(staged.info.storeName, 'Apotek Sehat Jaya');

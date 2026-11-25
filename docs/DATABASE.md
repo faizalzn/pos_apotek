@@ -10,7 +10,7 @@ Konvensi (ADR-0001):
 - Setiap tabel memiliki `updated_at`.
 - Tanggal disimpan sebagai teks **ISO-8601** (lihat `build.yaml`).
 
-Versi skema saat ini: **3**.
+Versi skema saat ini: **4**.
 
 ## Diagram
 
@@ -83,6 +83,7 @@ erDiagram
         TEXT id PK
         TEXT number "yyMMdd-NNNN, urut per hari"
         TEXT cashier_id FK
+        TEXT shift_id FK "nullable; kosong untuk transaksi sebelum v4"
         INT subtotal "harga × jumlah, sebelum diskon"
         INT item_discount "jumlah diskon per barang"
         INT discount "diskon total belanja"
@@ -119,6 +120,32 @@ erDiagram
     products ||--o{ batches : "stoknya"
     batches ||--o{ stock_movements : "riwayat"
     users ||--o{ stock_movements : "dicatat oleh"
+    shifts {
+        TEXT id PK
+        TEXT opened_by FK
+        TEXT opened_at
+        INT opening_cash "modal awal di laci"
+        TEXT status "open | closed"
+        TEXT closed_by FK "nullable"
+        TEXT closed_at "nullable"
+        INT expected_cash "nullable; dihitung & disimpan saat tutup"
+        INT counted_cash "nullable; hasil hitung kasir"
+        TEXT closing_note
+        TEXT created_at
+        TEXT updated_at
+    }
+    cash_entries {
+        TEXT id PK
+        TEXT shift_id FK
+        TEXT type "cashIn | cashOut"
+        INT amount "selalu positif"
+        TEXT note "wajib"
+        TEXT user_id FK
+        TEXT created_at
+        TEXT updated_at
+    }
+    shifts ||--o{ sales : "transaksi"
+    shifts ||--o{ cash_entries : "kas masuk/keluar"
     sales ||--|{ sale_items : "berisi"
     sales ||--o{ stock_movements : "mengurangi stok"
     users ||--o{ sales : "kasir"
@@ -148,9 +175,21 @@ erDiagram
 - Pembatalan (`voidSale`, hanya Pemilik, alasan wajib) mengembalikan stok ke **batch
   asal** lewat gerakan `saleVoid`; transaksi tetap ada dengan status `voided`.
 
+### Aturan shift (ADR-0011)
+
+- Paling banyak **satu shift terbuka**. Transaksi hanya bisa disimpan bila ada shift
+  terbuka (diperiksa di `SaleService`) dan dicatat ke shift tersebut, siapa pun yang
+  login.
+- Uang seharusnya di laci = modal awal + penjualan tunai + kas masuk − kas keluar
+  − pengembalian. Pengembalian = transaksi tunai dari shift lain yang dibatalkan
+  selama shift ini.
+- Saat ditutup, `expected_cash` **disimpan**, sehingga pembatalan sesudahnya tidak
+  mengubah angka shift yang sudah ditutup. Selisih ≠ 0 wajib diberi keterangan.
+
 Indeks tambahan: `product_units(product_id)`, `product_units(barcode)` unik,
 `batches(product_id, expiry_date)`, `stock_movements(product_id, created_at)`,
-`stock_movements(sale_id)`, `sales(created_at)`, `sale_items(sale_id)`.
+`stock_movements(sale_id)`, `sales(created_at)`, `sale_items(sale_id)`,
+`sales(shift_id)`, `shifts(opened_at)`, `cash_entries(shift_id)`.
 
 ## Kunci `app_settings`
 
@@ -190,3 +229,4 @@ migrasi, agar data yang sudah ada di HP tidak hilang. Alurnya:
 | 1 | `users`, `app_settings` |
 | 2 | `products`, `product_units`, `batches`, `stock_movements` + indeks |
 | 3 | `sales`, `sale_items`; `products.near_expiry_days`; `stock_movements.sale_id` |
+| 4 | `shifts`, `cash_entries`; `sales.shift_id` |

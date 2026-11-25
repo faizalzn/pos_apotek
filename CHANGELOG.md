@@ -5,6 +5,17 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 ## [Unreleased]
 
 ### Ditambahkan
+- **Shift (langkah 5)**:
+  - Buka shift dengan modal awal; Kasir meminta buka shift dulu sebelum berjualan.
+  - Kas masuk/keluar dengan keterangan (mis. beli galon, setor ke Pemilik).
+  - Tutup shift: uang seharusnya vs hitungan, selisih langsung tampil, keterangan
+    wajib bila tidak pas. Ringkasan bisa dicetak.
+  - Status shift di beranda; pengingat tutup shift saat keluar.
+  - Pembatalan transaksi dari shift sebelumnya dihitung sebagai pengembalian.
+- **Laporan (Pemilik)**: hari ini, kemarin, 7 hari, bulan ini/lalu, atau pilih tanggal.
+  Omzet, laba kotor & margin, rata-rata, tunai vs QRIS, diskon, pembatalan, per hari,
+  obat terlaris, per kasir, dan daftar shift beserta selisihnya.
+- Database versi 4 (`shifts`, `cash_entries`, `sales.shift_id`) dengan migrasi otomatis.
 - **Struk (langkah 4, dimajukan)**:
   - Setelah transaksi: **Cetak struk**, **WhatsApp** (ke nomor pelanggan atau pilih
     kontak), **Bagikan** sebagai gambar/PDF. Cetak otomatis bila printer sudah diatur.

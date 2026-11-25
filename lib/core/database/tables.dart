@@ -220,6 +220,9 @@ class Sales extends Table {
   TextColumn get number => text()();
   TextColumn get cashierId => text().references(Users, #id)();
 
+  /// Shift tempat transaksi terjadi (kosong untuk transaksi sebelum v4).
+  TextColumn get shiftId => text().nullable().references(Shifts, #id)();
+
   /// Jumlah harga × qty sebelum diskon apa pun.
   IntColumn get subtotal => integer()();
 
@@ -277,6 +280,58 @@ class SaleItems extends Table {
   /// unitPrice × quantity − discount.
   IntColumn get lineTotal => integer()();
   RealColumn get costTotal => real().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+enum ShiftStatus { open, closed }
+
+/// Satu giliran jaga kasir: dari buka (modal awal) sampai tutup (hitung laci).
+class Shifts extends Table {
+  TextColumn get id => text()();
+  TextColumn get openedBy => text().references(Users, #id)();
+  DateTimeColumn get openedAt => dateTime()();
+
+  /// Uang di laci saat shift dibuka.
+  IntColumn get openingCash => integer()();
+  TextColumn get status => textEnum<ShiftStatus>()();
+  TextColumn get closedBy => text().nullable().references(Users, #id)();
+  DateTimeColumn get closedAt => dateTime().nullable()();
+
+  /// Uang yang seharusnya ada di laci saat ditutup (dihitung aplikasi).
+  IntColumn get expectedCash => integer().nullable()();
+
+  /// Uang yang benar-benar dihitung kasir.
+  IntColumn get countedCash => integer().nullable()();
+  TextColumn get closingNote => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+enum CashEntryType {
+  cashIn('Kas masuk'),
+  cashOut('Kas keluar');
+
+  const CashEntryType(this.label);
+  final String label;
+}
+
+/// Uang masuk/keluar laci di luar penjualan (mis. beli galon, setor ke Pemilik).
+class CashEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get shiftId => text().references(Shifts, #id)();
+  TextColumn get type => textEnum<CashEntryType>()();
+
+  /// Selalu positif; arah ditentukan [type].
+  IntColumn get amount => integer()();
+  TextColumn get note => text()();
+  TextColumn get userId => text().references(Users, #id)();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

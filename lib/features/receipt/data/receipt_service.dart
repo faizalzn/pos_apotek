@@ -65,6 +65,12 @@ class ReceiptService {
     await _printer.send(s, bytes);
   }
 
+  /// Mencetak baris bebas (mis. ringkasan shift) ke printer thermal.
+  Future<void> printLines(List<ReceiptLine> lines) async {
+    final s = await settings();
+    await _printer.send(s, receiptToEscPos(lines, paper: s.paper));
+  }
+
   Future<void> printTest(PrinterSettings s) async =>
       _printer.send(s, testPage(s.paper, logo: await _logoImage(s)));
 

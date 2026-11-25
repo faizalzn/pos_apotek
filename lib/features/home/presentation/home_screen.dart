@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/clock.dart';
+import '../../../core/format.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/application/session_controller.dart';
 import '../../backup/data/backup_service.dart';
@@ -12,7 +13,10 @@ import '../../products/presentation/stock_alerts_screen.dart';
 import '../../sales/presentation/cashier_screen.dart';
 import '../../sales/presentation/sales_history_screen.dart';
 import '../../settings/data/settings_repository.dart';
+import '../../reports/presentation/reports_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
+import '../../shift/data/shift_service.dart';
+import '../../shift/presentation/shift_screen.dart';
 
 class _MenuItem {
   const _MenuItem({
@@ -61,16 +65,18 @@ class HomeScreen extends ConsumerWidget {
       description: 'Stok menipis, kedaluwarsa',
       open: (_) => const StockAlertsScreen(),
     ),
-    const _MenuItem(
+    _MenuItem(
       icon: Icons.schedule_rounded,
       label: 'Shift',
-      description: 'Buka & tutup kasir',
+      description: 'Buka & tutup, kas laci',
+      open: (_) => const ShiftScreen(),
     ),
-    const _MenuItem(
+    _MenuItem(
       icon: Icons.bar_chart_rounded,
       label: 'Laporan',
       description: 'Penjualan & laba',
       ownerOnly: true,
+      open: (_) => const ReportsScreen(),
     ),
     _MenuItem(
       icon: Icons.settings_rounded,
@@ -94,7 +100,7 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Keluar',
             icon: const Icon(Icons.logout_rounded),
-            onPressed: () => ref.read(sessionProvider.notifier).signOut(),
+            onPressed: () => _signOut(context, ref),
           ),
         ],
       ),
@@ -114,6 +120,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                const SliverToBoxAdapter(child: _ShiftStatus()),
                 const SliverToBoxAdapter(child: _BackupReminder()),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -128,6 +135,83 @@ class HomeScreen extends ConsumerWidget {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Keluar; bila shift milik pengguna ini masih terbuka, tawarkan menutupnya.
+Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+  final me = ref.read(sessionProvider);
+  final shift = await ref.read(shiftServiceProvider).getOpen();
+  if (!context.mounted) return;
+  if (shift != null && shift.openedBy == me?.id) {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Shift Anda masih terbuka'),
+        content: const Text(
+          'Bila sudah selesai jaga, tutup shift dulu dan hitung uang di laci '
+          'agar serah terima jelas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'logout'),
+            child: const Text('Keluar saja'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'close'),
+            child: const Text('Tutup shift'),
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted || choice == null) return;
+    if (choice == 'close') {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => CloseShiftScreen(shiftId: shift.id)),
+      );
+      return;
+    }
+  }
+  ref.read(sessionProvider.notifier).signOut();
+}
+
+/// Status shift di beranda.
+class _ShiftStatus extends ConsumerWidget {
+  const _ShiftStatus();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final open = ref.watch(openShiftProvider);
+    final theme = Theme.of(context);
+    final shift = open.value;
+    if (!open.hasValue) return const SizedBox.shrink();
+    final summary = shift == null ? null : ref.watch(shiftSummaryProvider(shift.id)).value;
+    String two(int n) => n.toString().padLeft(2, '0');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Card(
+        color: shift == null ? theme.colorScheme.surfaceContainerHigh : theme.colorScheme.primaryContainer,
+        child: ListTile(
+          key: const Key('shift-status'),
+          leading: Icon(shift == null ? Icons.lock_clock_outlined : Icons.lock_open_rounded),
+          title: Text(
+            shift == null
+                ? 'Shift belum dibuka'
+                : 'Shift ${summary?.openedByName ?? ''} · sejak '
+                    '${two(shift.openedAt.hour)}.${two(shift.openedAt.minute)}',
+          ),
+          subtitle: Text(
+            shift == null
+                ? 'Ketuk untuk membuka shift'
+                : '${summary?.saleCount ?? 0} transaksi · ${formatRupiah(summary?.totalSales ?? 0)}',
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const ShiftScreen()),
+          ),
         ),
       ),
     );
