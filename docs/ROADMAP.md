@@ -9,11 +9,14 @@ Urutan pengerjaan:
 2. ✅ **Produk** — CRUD produk, foto, satuan bertingkat, tambah stok (batch + ED)
 3. ✅ **Kasir** — cari/scan, keranjang, diskon, tunai/QRIS manual, riwayat & pembatalan
 3b. ✅ **Backup & restore** — kirim ke Drive/WhatsApp, cadangan harian, pemulihan (juga dari wizard)
-4. **QRIS dinamis** — scan QRIS statis merchant, sisipkan nominal
-5. **Struk** — printer ESC/POS (Bluetooth/USB/WiFi), PDF/gambar, kirim via WhatsApp
-6. **Shift & laporan** — buka/tutup shift, selisih kas, laporan harian & per shift
-7. **Notifikasi Telegram** — per transaksi & ringkasan tutup shift, kirim backup otomatis
+4. ✅ **Struk** (dimajukan) — printer thermal ESC/POS Bluetooth & WiFi, layanan cetak
+   Android, PDF/gambar, WhatsApp, logo apotek
+5. **Shift & laporan** — buka/tutup shift, selisih kas, laporan harian & per shift
+6. **Notifikasi Telegram** — setiap transaksi & pembatalan (antrean offline), ringkasan
+   tutup shift & harian, kirim backup otomatis
+7. **QRIS dinamis** — scan QRIS statis merchant, sisipkan nominal
 8. **Impor** — impor Excel/CSV dengan pemetaan kolom
+9. Printer thermal **USB (OTG)** — bila nanti printer yang dipakai berjenis USB
 
 Setelah langkah 3 aplikasi sudah bisa diuji coba di apotek.
 

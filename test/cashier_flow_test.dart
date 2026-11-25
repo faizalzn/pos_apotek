@@ -171,6 +171,15 @@ void main() {
         'Rp3.100',
       );
 
+      // Struk: printer belum diatur → kasir diberi tahu, tidak macet
+      expect(find.text('Printer belum diatur'), findsOneWidget);
+      await tapOn(tester, find.byKey(const Key('print-receipt')));
+      // Pengaturan dibaca dari stream database: majukan waktu sedikit.
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Minta Pemilik mengaturnya'), findsOneWidget);
+      expect(find.byKey(const Key('receipt-whatsapp')), findsOneWidget);
+
       // Kembali ke beranda → Riwayat
       await tapOn(tester, find.text('Kembali ke beranda'));
       await tapOn(tester, find.text('Riwayat'));

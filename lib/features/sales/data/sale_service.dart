@@ -249,25 +249,37 @@ class SaleService {
 
   Stream<SaleDetail?> watchDetail(String saleId) {
     final saleQuery = _db.select(_db.sales)..where((s) => s.id.equals(saleId));
-    return saleQuery.watchSingleOrNull().asyncMap((sale) async {
-      if (sale == null) return null;
-      final items =
-          await (_db.select(_db.saleItems)
-                ..where((i) => i.saleId.equals(saleId))
-                ..orderBy([(i) => OrderingTerm.asc(i.createdAt)]))
-              .get();
-      Future<String?> nameOf(String? id) async => id == null
-          ? null
-          : (await (_db.select(
-              _db.users,
-            )..where((u) => u.id.equals(id))).getSingleOrNull())?.name;
-      return SaleDetail(
-        sale: sale,
-        items: items,
-        cashierName: await nameOf(sale.cashierId) ?? '-',
-        voidedByName: await nameOf(sale.voidedBy),
-      );
-    });
+    return saleQuery.watchSingleOrNull().asyncMap(
+      (sale) => sale == null ? Future.value() : _detailOf(sale),
+    );
+  }
+
+  /// Detail transaksi sekali baca (untuk struk).
+  Future<SaleDetail?> getDetail(String saleId) async {
+    final sale = await (_db.select(
+      _db.sales,
+    )..where((s) => s.id.equals(saleId))).getSingleOrNull();
+    return sale == null ? null : _detailOf(sale);
+  }
+
+  Future<SaleDetail> _detailOf(Sale sale) async {
+    final saleId = sale.id;
+    final items =
+        await (_db.select(_db.saleItems)
+              ..where((i) => i.saleId.equals(saleId))
+              ..orderBy([(i) => OrderingTerm.asc(i.createdAt)]))
+            .get();
+    Future<String?> nameOf(String? id) async => id == null
+        ? null
+        : (await (_db.select(
+            _db.users,
+          )..where((u) => u.id.equals(id))).getSingleOrNull())?.name;
+    return SaleDetail(
+      sale: sale,
+      items: items,
+      cashierName: await nameOf(sale.cashierId) ?? '-',
+      voidedByName: await nameOf(sale.voidedBy),
+    );
   }
 
   /// Nomor transaksi `yyMMdd-NNNN`, urut per hari.

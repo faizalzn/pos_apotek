@@ -78,6 +78,11 @@ class SettingsRepository {
 
   Future<void> set(String key, String value) => setAll({key: value});
 
+  /// Semua pengaturan, sekali baca.
+  Future<Map<String, String>> getAll() async => {
+        for (final r in await _db.select(_db.appSettings).get()) r.key: r.value,
+      };
+
   Future<void> setAll(Map<String, String> values) async {
     final now = _now();
     await _db.batch((b) {
