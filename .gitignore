@@ -1,0 +1,89 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Widget Preview related
+.widget_preview/
+
+# ============================================================
+# Data privat & rahasia — JANGAN PERNAH di-commit
+# ============================================================
+# Token bot Telegram & konfigurasi rahasia lain (dipakai via --dart-define-from-file)
+secrets.json
+secrets.*.json
+!secrets.example.json
+*.env
+.env*
+
+# Kunci penandatanganan APK (keystore)
+*.jks
+*.keystore
+key.properties
+android/key.properties
+
+# Konfigurasi layanan cloud (jika nanti memakai Firebase/Supabase)
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# File backup & data apotek (data produk, transaksi, pelanggan)
+*.posbackup
+backups/
+*.db
+*.sqlite
+*.sqlite3
+
+# File impor/ekspor data asli (gunakan folder sample_data/ untuk contoh dummy)
+*.xlsx
+*.xls
+*.csv
+!sample_data/**
+
+# Hasil build APK / bundle
+*.apk
+*.aab
+
+# Pengaturan lokal Claude Code / editor
+.claude/settings.local.json
