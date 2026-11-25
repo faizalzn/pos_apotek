@@ -131,10 +131,8 @@ void main() {
     await tapOn(tester, find.text('Selesai, masuk ke aplikasi'));
 
     // Pengaturan → Pengguna → Tambah
-    await tester.tap(find.text('Pengaturan'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Pengguna'));
-    await tester.pumpAndSettle();
+    await tapOn(tester, find.text('Pengaturan'));
+    await tapOn(tester, find.text('Pengguna'));
     await tester.tap(find.text('Tambah pengguna'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), 'Dewi');

@@ -8,6 +8,7 @@ import 'package:pos_apotek/features/products/data/product_models.dart';
 import 'package:pos_apotek/features/products/data/product_repository.dart';
 import 'package:pos_apotek/features/sales/application/cart_controller.dart';
 import 'package:pos_apotek/features/sales/data/sale_service.dart';
+import 'package:pos_apotek/features/shift/data/shift_service.dart';
 
 import '../helpers.dart';
 
@@ -45,6 +46,7 @@ void main() {
       role: UserRole.cashier,
       pin: '739164',
     );
+    await ShiftService(db, clock.call).open(by: cashier, openingCash: 100000);
 
     final p = await products.create(
       ProductInput(
@@ -133,6 +135,24 @@ void main() {
   });
 
   group('transaksi', () {
+    test('tanpa shift terbuka ditolak', () async {
+      final shifts = ShiftService(db, clock.call);
+      final open = (await shifts.getOpen())!;
+      await shifts.close(shiftId: open.id, countedCash: 100000, by: cashier);
+      cart().add(para, unit(para, 'Tablet'));
+      await expectLater(
+        sales.complete(
+          cart: cartState(),
+          method: PaymentMethod.cash,
+          amountPaid: 500,
+          cashier: cashier,
+        ),
+        throwsA(
+          isA<UserRuleException>().having((e) => e.message, 'message', contains('Buka shift')),
+        ),
+      );
+    });
+
     test(
       'tunai: stok berkurang FEFO, kembalian & harga beli tercatat',
       () async {

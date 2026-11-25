@@ -11,7 +11,8 @@ Urutan pengerjaan:
 3b. ✅ **Backup & restore** — kirim ke Drive/WhatsApp, cadangan harian, pemulihan (juga dari wizard)
 4. ✅ **Struk** (dimajukan) — printer thermal ESC/POS Bluetooth & WiFi, layanan cetak
    Android, PDF/gambar, WhatsApp, logo apotek
-5. **Shift & laporan** — buka/tutup shift, selisih kas, laporan harian & per shift
+5. ✅ **Shift & laporan** — buka/tutup shift, kas masuk/keluar, selisih kas, laporan
+   omzet/laba, per hari, obat terlaris, per kasir, per shift
 6. **Notifikasi Telegram** — setiap transaksi & pembatalan (antrean offline), ringkasan
    tutup shift & harian, kirim backup otomatis
 7. **QRIS dinamis** — scan QRIS statis merchant, sisipkan nominal

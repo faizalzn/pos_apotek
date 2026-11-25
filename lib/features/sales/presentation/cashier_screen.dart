@@ -10,6 +10,8 @@ import '../../products/data/product_repository.dart';
 import '../../products/presentation/barcode_scanner_screen.dart';
 import '../../products/presentation/product_list_screen.dart' show matchesQuery;
 import '../../products/presentation/widgets/product_widgets.dart';
+import '../../shift/data/shift_service.dart';
+import '../../shift/presentation/shift_screen.dart';
 import '../application/cart_controller.dart';
 import 'cart_view.dart';
 
@@ -83,6 +85,49 @@ class _CashierScreenState extends ConsumerState<CashierScreen> {
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
     final wide = MediaQuery.sizeOf(context).width >= 840;
+    final shift = ref.watch(openShiftProvider);
+    if (shift case AsyncData(value: null)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Kasir')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ContentWidth(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(
+                    Icons.lock_clock_outlined,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Buka shift dulu',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Hitung uang di laci untuk modal awal, lalu mulai berjualan.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    key: const Key('open-shift'),
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+                    onPressed: () => openShiftFlow(context, ref),
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Buka shift'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     final productPane = Column(
       children: [

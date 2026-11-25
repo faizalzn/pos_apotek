@@ -114,6 +114,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Dari layar Kasir yang meminta "Buka shift dulu".
+  Future<void> openShift(WidgetTester tester, String cash) async {
+    expect(find.text('Buka shift dulu'), findsOneWidget);
+    await tapOn(tester, find.byKey(const Key('open-shift')));
+    await tester.enterText(find.byKey(const Key('opening-cash')), cash);
+    await tapOn(tester, find.byKey(const Key('confirm-open-shift')));
+  }
+
   Future<void> finish(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox());
     await db.close();
@@ -124,6 +132,7 @@ void main() {
     (tester) async {
       await login(tester, 'Dewi', '739164');
       await tapOn(tester, find.text('Kasir'));
+      await openShift(tester, '100000');
 
       // Paracetamol punya 2 satuan → pilih Strip
       await tapOn(tester, find.text('Paracetamol'));
@@ -205,6 +214,7 @@ void main() {
     (tester) async {
       await login(tester, 'Dewi', '739164', size: const Size(2560, 1600));
       await tapOn(tester, find.text('Kasir'));
+      await openShift(tester, '0');
       expect(find.text('Keranjang kosong'), findsOneWidget);
 
       // Scanner USB/Bluetooth mengetik barcode lalu Enter
@@ -229,6 +239,7 @@ void main() {
   ) async {
     await login(tester, 'Sari', '482915');
     await tapOn(tester, find.text('Kasir'));
+    await openShift(tester, '50000');
     await tapOn(tester, find.text('Amoxicillin'));
     await tapOn(tester, find.byKey(const Key('open-cart')));
 
@@ -265,6 +276,62 @@ void main() {
       clock.call,
     ).loadAll()).firstWhere((x) => x.product.name == 'Amoxicillin');
     expect(p.stock, 20);
+    await finish(tester);
+  });
+
+  testWidgets('shift: jual → kas keluar → tutup dengan selisih → laporan', (tester) async {
+    await login(tester, 'Sari', '482915');
+    expect(find.text('Shift belum dibuka'), findsOneWidget);
+    await tapOn(tester, find.text('Kasir'));
+    await openShift(tester, '100000');
+
+    // Jual 1 Strip Paracetamol tunai, uang pas
+    await tapOn(tester, find.text('Paracetamol'));
+    await tapOn(tester, find.text('Strip'));
+    await tapOn(tester, find.byKey(const Key('open-cart')));
+    await tapOn(tester, find.byKey(const Key('pay')));
+    await tapOn(tester, find.text('Uang pas'));
+    await tapOn(tester, find.byKey(const Key('complete-sale')));
+    await tapOn(tester, find.text('Kembali ke beranda'));
+    expect(find.text('1 transaksi · Rp4.500'), findsOneWidget);
+
+    // Shift → kas keluar 10.000
+    await tapOn(tester, find.byKey(const Key('shift-status')));
+    await tapOn(tester, find.byKey(const Key('cash-out')));
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), '10000');
+    await tester.enterText(fields.at(1), 'Beli galon');
+    await tapOn(tester, find.text('Simpan'));
+    expect(find.text('Beli galon'), findsOneWidget);
+    expect(find.text('Rp94.500'), findsOneWidget); // seharusnya di laci
+
+    // Tutup: dihitung 94.000 → kurang 500, wajib keterangan
+    await tapOn(tester, find.byKey(const Key('close-shift')));
+    await tester.enterText(find.byKey(const Key('counted-cash')), '94000');
+    await tester.pump();
+    expect(tester.widget<Text>(find.byKey(const Key('shift-diff'))).data, 'Kurang Rp500');
+    // Ada selisih → tombol baru aktif setelah keterangan diisi.
+    final close = find.byKey(const Key('confirm-close-shift'));
+    expect(tester.widget<FilledButton>(close).onPressed, isNull);
+    await tester.enterText(find.byKey(const Key('shift-note')), 'Salah kembalian');
+    await tester.pump();
+    // Tutup notifikasi "Kas keluar tercatat" yang masih tampil.
+    tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).clearSnackBars();
+    await tester.pumpAndSettle();
+    await tapOn(tester, close);
+    expect(find.text('Shift berhasil ditutup'), findsOneWidget);
+    await tapOn(tester, find.text('Selesai'));
+    expect(find.text('Kurang Rp500'), findsOneWidget); // di riwayat shift
+
+    // Laporan hari ini
+    await tapOn(tester, find.byType(BackButton));
+    await tapOn(tester, find.text('Laporan'));
+    expect(tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('stat-revenue')),
+      matching: find.byType(Text),
+    ).at(1)).data, 'Rp4.500');
+    expect(find.text('Paracetamol'), findsOneWidget);
+    expect(find.text('1 Strip'), findsOneWidget);
     await finish(tester);
   });
 

@@ -20,6 +20,8 @@ part 'app_database.g.dart';
     StockMovements,
     Sales,
     SaleItems,
+    Shifts,
+    CashEntries,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -28,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pos_apotek'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   Future<void>? _closing;
 
@@ -60,6 +62,12 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(schema.stockMovements, schema.stockMovements.saleId);
         await _createIndexes(version: 3);
       },
+      from3To4: (m, schema) async {
+        await m.createTable(schema.shifts);
+        await m.createTable(schema.cashEntries);
+        await m.addColumn(schema.sales, schema.sales.shiftId);
+        await _createIndexes(version: 4);
+      },
     ),
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -79,6 +87,11 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_movements_sale ON stock_movements (sale_id)',
       'CREATE INDEX IF NOT EXISTS idx_sales_created ON sales (created_at)',
       'CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items (sale_id)',
+    ],
+    4: [
+      'CREATE INDEX IF NOT EXISTS idx_sales_shift ON sales (shift_id)',
+      'CREATE INDEX IF NOT EXISTS idx_shifts_opened ON shifts (opened_at)',
+      'CREATE INDEX IF NOT EXISTS idx_cash_entries_shift ON cash_entries (shift_id)',
     ],
   };
 
