@@ -1,13 +1,19 @@
 import 'package:material_ui/material_ui.dart';
 
 /// Menampilkan pesan singkat di bawah layar.
-void showMessage(BuildContext context, String message, {bool error = false}) {
+void showMessage(
+  BuildContext context,
+  String message, {
+  bool error = false,
+  Duration duration = const Duration(seconds: 4),
+}) {
   final scheme = Theme.of(context).colorScheme;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
         content: Text(message),
+        duration: duration,
         backgroundColor: error ? scheme.error : null,
       ),
     );
@@ -60,12 +66,12 @@ class ContentWidth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: child,
-        ),
-      );
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: child,
+    ),
+  );
 }
 
 /// Format durasi singkat untuk pesan penguncian, mis. "30 detik", "2 menit".
