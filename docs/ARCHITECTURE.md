@@ -62,6 +62,9 @@ Saat keluar, semua layar yang terbuka ditutup otomatis (`app.dart`).
   Pemilik yang lupa PIN. Hanya hash-nya yang disimpan; setelah dipakai, kode lama
   hangus dan kode baru diberikan. Kasir yang lupa PIN diatur ulang oleh Pemilik.
 - Pemilik aktif terakhir tidak bisa dinonaktifkan.
+- **Kode darurat developer** (jalan terakhir, ADR-0009): kode tantangan → balasan
+  bertanda tangan Ed25519 dari `tool/kode_darurat.dart`. Aplikasi hanya menyimpan kunci
+  publik. Panduan: [KODE_DARURAT.md](KODE_DARURAT.md).
 
 ## Pengujian
 

@@ -6,6 +6,7 @@ import '../../../core/widgets/common.dart';
 import '../../../core/widgets/pin_pad.dart';
 import '../../../core/widgets/recovery_code_view.dart';
 import '../data/recovery_code_service.dart';
+import 'rescue_screen.dart';
 
 /// Pemilik membuat PIN baru memakai kode pemulihan.
 class ForgotPinScreen extends ConsumerStatefulWidget {
@@ -135,6 +136,17 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 )
               : const Text('Lanjut'),
+        ),
+        const SizedBox(height: 32),
+        const Divider(),
+        TextButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => RescueScreen(owner: widget.owner),
+            ),
+          ),
+          icon: const Icon(Icons.support_agent_rounded),
+          label: const Text('Kode pemulihan hilang?'),
         ),
       ],
     );

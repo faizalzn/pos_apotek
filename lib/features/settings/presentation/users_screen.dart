@@ -146,6 +146,24 @@ class UsersScreen extends ConsumerWidget {
         data: (list) => ListView(
           padding: const EdgeInsets.only(bottom: 96),
           children: [
+            if (list
+                    .where((u) => u.isActive && u.role == UserRole.owner)
+                    .length ==
+                1)
+              Card(
+                key: const Key('second-owner-tip'),
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                color: theme.colorScheme.secondaryContainer,
+                child: ListTile(
+                  leading: const Icon(Icons.shield_outlined),
+                  title: const Text('Saran: tambahkan Pemilik kedua'),
+                  subtitle: const Text(
+                    'Agar PIN Pemilik bisa diatur ulang tanpa kode pemulihan '
+                    'bila suatu saat lupa. Bisa untuk keluarga atau orang '
+                    'kepercayaan.',
+                  ),
+                ),
+              ),
             for (final user in list)
               ListTile(
                 onTap: () => _actions(context, ref, user),

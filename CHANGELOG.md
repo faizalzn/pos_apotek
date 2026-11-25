@@ -4,6 +4,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 
 ## [Unreleased]
 
+### Ditambahkan
+- **Kode darurat developer**: Pemilik yang lupa PIN dan kehilangan kode pemulihan bisa
+  membuat PIN baru lewat kode tantangan → balasan dari developer (Ed25519), tanpa
+  kehilangan data. Alat developer: `tool/kode_darurat.dart`. Panduan: `docs/KODE_DARURAT.md`.
+- Saran membuat **Pemilik kedua** di akhir wizard dan di layar Pengguna.
+- `secrets.example.json`: `RESCUE_PUBLIC_KEY`, `DEVELOPER_WHATSAPP`.
+
 ### Diperbaiki
 - Mengembalikan dependency `material_ui`: sejak Flutter 3.47 ini adalah paket Material
   resmi, dan `package:flutter/material.dart` sudah deprecated.
