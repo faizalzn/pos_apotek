@@ -84,6 +84,13 @@ class TelegramApi {
     );
   }
 
+  /// Username bot (tanpa `@`) — sekaligus memeriksa token.
+  Future<String> getMe() async {
+    final me =
+        await _call(() => _client.post(_uri('getMe'))) as Map<String, dynamic>;
+    return me['username'] as String;
+  }
+
   Future<void> sendMessage(int chatId, String html) => _call(
     () => _client.post(
       _uri('sendMessage'),

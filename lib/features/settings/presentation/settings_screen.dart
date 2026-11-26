@@ -141,7 +141,7 @@ class SettingsScreen extends ConsumerWidget {
               leading: const Icon(Icons.send_outlined),
               title: const Text('Notifikasi Telegram'),
               subtitle: Text(switch (ref.watch(telegramStatusProvider).value) {
-                TelegramStatus(enabled: false) => 'Belum disiapkan',
+                TelegramStatus(enabled: false) => 'Belum ada bot · ketuk untuk menyiapkan',
                 TelegramStatus(linked: true, :final chatName, :final pending) =>
                   pending == 0
                       ? 'Terhubung ke $chatName'

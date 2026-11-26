@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
@@ -25,10 +26,14 @@ class TelegramSettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: !value.enabled
-                    ? const [_NotConfigured()]
-                    : value.linked
-                    ? [_Linked(status: value)]
-                    : const [_NotLinked()],
+                    ? const [_TokenForm()]
+                    : [
+                        if (value.linked)
+                          _Linked(status: value)
+                        else
+                          const _NotLinked(),
+                        _BotInfo(status: value),
+                      ],
               ),
             ),
           ],
@@ -40,18 +45,205 @@ class TelegramSettingsScreen extends ConsumerWidget {
   }
 }
 
-class _NotConfigured extends StatelessWidget {
-  const _NotConfigured();
+/// Langkah 1: Pemilik membuat bot di @BotFather lalu menempel tokennya.
+class _TokenForm extends ConsumerStatefulWidget {
+  const _TokenForm({this.onDone});
+
+  /// Dipanggil setelah token tersimpan (mis. menutup dialog "Ganti bot").
+  final VoidCallback? onDone;
 
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.all(24),
-    child: Text(
-      'Notifikasi Telegram belum disiapkan di aplikasi ini. Minta pembuat '
-      'aplikasi membuat bot Telegram dan memasang ulang aplikasi.',
-      textAlign: TextAlign.center,
-    ),
-  );
+  ConsumerState<_TokenForm> createState() => _TokenFormState();
+}
+
+class _TokenFormState extends ConsumerState<_TokenForm> {
+  final _token = TextEditingController();
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _token.dispose();
+    super.dispose();
+  }
+
+  Future<void> _paste() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text case final t? when t.isNotEmpty) {
+      setState(() => _token.text = t.trim());
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final username = await ref
+          .read(telegramServiceProvider)
+          .saveToken(_token.text);
+      if (!mounted) return;
+      showMessage(context, 'Bot @$username siap dipakai');
+      widget.onDone?.call();
+    } on TelegramException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.onDone == null) ...[
+            Icon(
+              Icons.smart_toy_outlined,
+              size: 56,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Siapkan bot Telegram (sekali saja)',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Bot inilah yang nanti mengirim laporan ke Telegram Pemilik. '
+              'Gratis, sekitar 2 menit.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+          ],
+          const _Step(1, 'Buka Telegram, cari @BotFather, tekan MULAI/START.'),
+          const _Step(2, 'Kirim pesan /newbot.'),
+          const _Step(
+            3,
+            'Isi nama bot (bebas, mis. "Apotek Sehat"), lalu username yang '
+            'berakhiran "bot" (mis. apotek_sehat_bot).',
+          ),
+          const _Step(
+            4,
+            'BotFather membalas dengan token, bentuknya seperti '
+            '123456789:AAHk3…. Salin token itu, lalu tempel di bawah.',
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => launchUrl(
+              Uri.https('t.me', '/BotFather'),
+              mode: LaunchMode.externalApplication,
+            ),
+            icon: const Icon(Icons.open_in_new),
+            label: const Text('Buka @BotFather'),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            key: const Key('telegram-token'),
+            controller: _token,
+            autocorrect: false,
+            enableSuggestions: false,
+            keyboardType: TextInputType.visiblePassword,
+            onChanged: (_) => setState(() => _error = null),
+            decoration: InputDecoration(
+              labelText: 'Token bot',
+              hintText: '123456789:AAH…',
+              errorText: _error,
+              errorMaxLines: 3,
+              suffixIcon: IconButton(
+                tooltip: 'Tempel',
+                onPressed: _paste,
+                icon: const Icon(Icons.content_paste),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Jangan bagikan token ini ke siapa pun. Token hanya disimpan di HP ini '
+            '(dan ikut di file backup).',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            key: const Key('telegram-save-token'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(56),
+            ),
+            onPressed: _saving || _token.text.trim().isEmpty ? null : _save,
+            icon: _saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            label: const Text('Simpan & periksa'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bot yang dipakai + ganti/hapus.
+class _BotInfo extends ConsumerWidget {
+  const _BotInfo({required this.status});
+
+  final TelegramStatus status;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.read(telegramServiceProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 32),
+        ListTile(
+          leading: const Icon(Icons.smart_toy_outlined),
+          title: Text('Bot @${status.botUsername}'),
+          subtitle: Text(
+            status.tokenFromBuild
+                ? 'Dipasang oleh pembuat aplikasi'
+                : 'Ketuk untuk mengganti token bot',
+          ),
+          onTap: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            showDragHandle: true,
+            builder: (sheet) => Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(sheet).bottom,
+              ),
+              child: SingleChildScrollView(
+                child: _TokenForm(onDone: () => Navigator.pop(sheet)),
+              ),
+            ),
+          ),
+        ),
+        if (!status.tokenFromBuild)
+          ListTile(
+            leading: const Icon(Icons.delete_outline),
+            title: const Text('Hapus token bot'),
+            onTap: () async {
+              final ok = await confirm(
+                context,
+                title: 'Hapus token bot?',
+                message:
+                    'Notifikasi berhenti dan sambungan Telegram diputus. '
+                    'Pesan yang belum terkirim dihapus.',
+                confirmLabel: 'Hapus',
+              );
+              if (ok) await service.removeToken();
+            },
+          ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
 }
 
 class _NotLinked extends ConsumerStatefulWidget {
@@ -75,7 +267,7 @@ class _NotLinkedState extends ConsumerState<_NotLinked> {
   Future<void> _connect({required bool share}) async {
     final service = ref.read(telegramServiceProvider);
     final code = service.newLinkCode();
-    final link = service.linkUri(code);
+    final link = await service.linkUri(code);
     setState(() {
       _waiting = true;
       _cancelled = false;

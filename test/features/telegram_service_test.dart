@@ -29,13 +29,26 @@ class FakeTelegram {
   final documents = <String>[];
   var offline = false;
   var updates = <Map<String, dynamic>>[];
+  final tokens = <String>[];
 
   late final client = MockClient.streaming((req, body) async {
     if (offline) throw const SocketException('offline');
     final method = req.url.pathSegments.last;
     final bytes = await body.toBytes();
     Object? result = true;
+    if (req.url.pathSegments.first.contains('DITOLAK')) {
+      return http.StreamedResponse(
+        Stream.value(
+          utf8.encode(
+            '{"ok":false,"error_code":401,"description":"Unauthorized"}',
+          ),
+        ),
+        401,
+      );
+    }
     switch (method) {
+      case 'getMe':
+        result = {'username': 'bot_baru_bot'};
       case 'sendMessage':
         sent.add(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>);
       case 'sendDocument':
@@ -76,7 +89,7 @@ void main() {
     settings = SettingsRepository(db, clock.call);
     server = FakeTelegram();
     temp = Directory.systemTemp.createTempSync('tg_');
-    outbox = TelegramOutboxWriter(db, settings, clock.call, enabled: true);
+    outbox = TelegramOutboxWriter(db, settings, clock.call);
     shifts = ShiftService(db, clock.call, notifier: outbox);
     products = ProductRepository(db, clock.call);
     sales = SaleService(db, products, clock.call, notifier: outbox);
@@ -88,7 +101,10 @@ void main() {
         telegramBotToken: 't',
         telegramBotUsername: 'apotek_bot',
       ),
-      api: TelegramApi('t', client: server.client),
+      apiFactory: (token) {
+        server.tokens.add(token);
+        return TelegramApi(token, client: server.client);
+      },
       now: clock.call,
       reports: ReportService(db, shifts),
       makeBackup: () async =>
@@ -198,7 +214,7 @@ void main() {
     await link();
     expect(await settings.get(TelegramKeys.chatId), '4242');
     expect(
-      telegram.linkUri('abc').toString(),
+      (await telegram.linkUri('abc')).toString(),
       'https://t.me/apotek_bot?start=abc',
     );
   });
@@ -321,5 +337,77 @@ void main() {
     ).build(ReportRange.day(DateTime(2026, 11, 23)));
     expect(dailyMessage(r), contains('Senin, 23 November 2026'));
     expect(dailyMessage(r), contains('Tidak ada transaksi'));
+  });
+
+  group('token bot diisi di aplikasi', () {
+    const good = '123456789:AAHk3abcdefghijklmnopqrstuvwxyz012';
+
+    test('format salah ditolak tanpa menghubungi Telegram', () async {
+      await expectLater(
+        telegram.saveToken('bukan token'),
+        throwsA(isA<TelegramException>()),
+      );
+      expect(server.tokens, isEmpty);
+    });
+
+    test('token ditolak Telegram', () async {
+      await expectLater(
+        telegram.saveToken('123456789:DITOLAKabcdefghijklmnopqrstuvwxyz'),
+        throwsA(
+          isA<TelegramException>().having(
+            (e) => e.message,
+            'pesan',
+            contains('ditolak'),
+          ),
+        ),
+      );
+      expect((await telegram.credentials())!.fromBuild, isTrue);
+    });
+
+    test(
+      'token baru menggantikan bot build & memutus sambungan lama',
+      () async {
+        await link();
+        expect(await telegram.saveToken('  $good\n'), 'bot_baru_bot');
+        final c = (await telegram.credentials())!;
+        expect(c.token, good);
+        expect(c.username, 'bot_baru_bot');
+        expect(c.fromBuild, isFalse);
+        expect(
+          await settings.get(TelegramKeys.chatId),
+          '',
+          reason: 'harus START bot baru',
+        );
+        expect(
+          (await telegram.linkUri('x')).toString(),
+          'https://t.me/bot_baru_bot?start=x',
+        );
+
+        // Token sama disimpan ulang → sambungan tetap.
+        await settings.set(TelegramKeys.chatId, '99');
+        await telegram.saveToken(good);
+        expect(await settings.get(TelegramKeys.chatId), '99');
+
+        await telegram.removeToken();
+        expect((await telegram.credentials())!.fromBuild, isTrue);
+        await telegram.stop();
+      },
+    );
+  });
+
+  test('tanpa token build maupun isian: tidak aktif', () async {
+    final none = TelegramService(
+      db: db,
+      settings: settings,
+      outbox: outbox,
+      config: const AppConfig(),
+      apiFactory: (t) => TelegramApi(t, client: server.client),
+      now: clock.call,
+      reports: ReportService(db, shifts),
+      makeBackup: () async => File('x'),
+    );
+    expect(await none.credentials(), isNull);
+    await none.flush();
+    expect(server.tokens, isEmpty);
   });
 }

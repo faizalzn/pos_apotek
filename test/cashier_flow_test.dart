@@ -335,6 +335,21 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('pemilik bisa mengisi token bot Telegram di aplikasi', (tester) async {
+    await login(tester, 'Sari', '482915');
+    await tapOn(tester, find.text('Pengaturan'));
+    expect(find.text('Belum ada bot · ketuk untuk menyiapkan'), findsOneWidget);
+    await tapOn(tester, find.text('Notifikasi Telegram'));
+    expect(find.text('Siapkan bot Telegram (sekali saja)'), findsOneWidget);
+    final save = find.byKey(const Key('telegram-save-token'));
+    expect(tester.widget<FilledButton>(save).onPressed, isNull);
+    await tester.enterText(find.byKey(const Key('telegram-token')), 'salah');
+    await tester.pump();
+    await tapOn(tester, save);
+    expect(find.textContaining('Token tidak dikenali'), findsOneWidget);
+    await finish(tester);
+  });
+
   test('pilihan uang cepat', () {
     expect(quickCashOptions(6900), [7000, 8000, 10000, 20000]);
     expect(quickCashOptions(12350), [13000, 14000, 15000, 20000]);
