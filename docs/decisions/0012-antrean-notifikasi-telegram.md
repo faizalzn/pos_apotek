@@ -29,6 +29,16 @@ terlewat, dan HP kasir belum tentu milik Pemilik.
   - Tutup shift: rekonsiliasi kas.
   - Ringkasan harian.
   - File backup (tanpa foto) setelah tutup shift.
+  - Laporan Excel shift setelah tutup shift. File dibuat saat dikirim; antrean hanya
+    menyimpan `shiftId`. Kalau shift-nya sudah tidak ada (mis. setelah pemulihan),
+    pesan dilewati.
+- **Excel ditulis sendiri** (`lib/core/xlsx.dart`: SpreadsheetML minimal, teks
+  inline, di-zip dengan `archive`):
+  - Paket `excel` di pub.dev membutuhkan `archive` 3, padahal fitur backup memakai
+    `archive` 4.
+  - Kebutuhannya sederhana: teks, angka, tanggal, tebal, lebar kolom, dan baris judul
+    beku.
+  - Hasilnya sudah diperiksa dengan LibreOffice dan openpyxl.
   - Setiap jenis bisa dimatikan.
 - **Peringatan stok** hanya dikirim saat produk *baru* menjadi menipis atau habis, supaya
   tidak berulang di setiap penjualan.

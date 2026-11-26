@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/format.dart';
@@ -9,6 +10,7 @@ import '../../auth/data/user_repository.dart' show UserRuleException;
 import '../../receipt/data/printer_settings.dart';
 import '../../receipt/data/receipt_service.dart';
 import '../../settings/data/settings_repository.dart';
+import '../data/shift_excel.dart';
 import '../data/shift_receipt.dart';
 import '../data/shift_service.dart';
 
@@ -505,6 +507,8 @@ class ShiftDetailScreen extends ConsumerWidget {
                   if (!value.isOpen) ...[
                     const SizedBox(height: 12),
                     PrintShiftButton(summary: value),
+                    const SizedBox(height: 8),
+                    ShareShiftExcelButton(summary: value),
                   ],
                 ],
               ),
@@ -737,6 +741,8 @@ class ShiftClosedScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 PrintShiftButton(summary: summary),
                 const SizedBox(height: 8),
+                ShareShiftExcelButton(summary: summary),
+                const SizedBox(height: 8),
                 FilledButton(
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(52),
@@ -749,6 +755,63 @@ class ShiftClosedScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Bagikan laporan Excel shift (khusus Pemilik: berisi HPP & laba).
+class ShareShiftExcelButton extends ConsumerStatefulWidget {
+  const ShareShiftExcelButton({super.key, required this.summary});
+
+  final ShiftSummary summary;
+
+  @override
+  ConsumerState<ShareShiftExcelButton> createState() =>
+      _ShareShiftExcelButtonState();
+}
+
+class _ShareShiftExcelButtonState extends ConsumerState<ShareShiftExcelButton> {
+  bool _busy = false;
+
+  Future<void> _share() async {
+    setState(() => _busy = true);
+    try {
+      final file = await ref
+          .read(shiftExcelProvider)
+          .writeFile(widget.summary.shift.id);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile(
+              file.path,
+              mimeType:
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ),
+          ],
+          subject: 'Laporan shift ${widget.summary.openedByName}',
+        ),
+      );
+    } on Object catch (e) {
+      if (mounted) showMessage(context, 'Excel gagal dibuat: $e', error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!ref.watch(isOwnerProvider)) return const SizedBox.shrink();
+    return OutlinedButton.icon(
+      key: const Key('share-shift-excel'),
+      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+      onPressed: _busy ? null : _share,
+      icon: _busy
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.table_view_outlined),
+      label: const Text('Bagikan laporan Excel'),
     );
   }
 }

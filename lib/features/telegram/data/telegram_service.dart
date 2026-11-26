@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
@@ -15,6 +16,7 @@ import '../../backup/data/backup_service.dart';
 import '../../reports/data/report_service.dart';
 import '../../sales/data/sale_service.dart';
 import '../../settings/data/settings_repository.dart';
+import '../../shift/data/shift_excel.dart';
 import '../../shift/data/shift_service.dart';
 import 'telegram_api.dart';
 import 'telegram_messages.dart';
@@ -30,6 +32,7 @@ abstract final class TelegramKeys {
   static const notifyShift = 'telegram.notify_shift';
   static const notifyDaily = 'telegram.notify_daily';
   static const sendBackup = 'telegram.send_backup';
+  static const sendShiftExcel = 'telegram.send_shift_excel';
 
   /// Tanggal terakhir yang ringkasan hariannya sudah diantrekan (yyyy-MM-dd).
   static const dailyLast = 'telegram.daily_last';
@@ -56,6 +59,11 @@ enum TelegramTopic {
     TelegramKeys.notifyDaily,
     'Ringkasan harian',
     'Dikirim setelah hari berganti saat aplikasi dibuka',
+  ),
+  shiftExcel(
+    TelegramKeys.sendShiftExcel,
+    'Laporan Excel saat tutup shift',
+    'Transaksi, rincian barang, rekap produk, kas, dan stok dalam file Excel',
   ),
   backup(
     TelegramKeys.sendBackup,
@@ -117,6 +125,16 @@ class TelegramOutboxWriter implements SaleNotifier, ShiftNotifier {
     if (await wants(TelegramTopic.shift)) {
       await add(shiftClosedMessage(summary));
     }
+    if (await wants(TelegramTopic.shiftExcel)) {
+      await add(
+        jsonEncode({
+          'shiftId': summary.shift.id,
+          'caption':
+              '📗 Laporan Excel shift ${escapeHtml(summary.openedByName)}',
+        }),
+        kind: OutboxKind.shiftExcel,
+      );
+    }
     if (await wants(TelegramTopic.backup)) {
       await add(
         '💾 Backup data setelah tutup shift ${escapeHtml(summary.openedByName)}',
@@ -163,6 +181,7 @@ class TelegramService {
     required this._now,
     required this._reports,
     required this._makeBackup,
+    required this._makeShiftExcel,
   });
 
   final AppDatabase _db;
@@ -173,6 +192,7 @@ class TelegramService {
   final Clock _now;
   final ReportService _reports;
   final Future<File> Function() _makeBackup;
+  final Future<File> Function(String shiftId) _makeShiftExcel;
 
   TelegramApi? _api;
   String? _apiToken;
@@ -389,6 +409,25 @@ class TelegramService {
               ? '${row.body}\n<i>(tertunda, tidak ada internet)</i>'
               : row.body,
         );
+      case OutboxKind.shiftExcel:
+        final data = jsonDecode(row.body) as Map<String, dynamic>;
+        final File file;
+        try {
+          file = await _makeShiftExcel(data['shiftId'] as String);
+        } on StateError {
+          return; // shift tidak ada lagi (mis. setelah pemulihan) → lewati
+        }
+        try {
+          await api.sendDocument(
+            chat,
+            file,
+            caption:
+                '${data['caption']}\nBuka dengan Excel, Google Sheets, '
+                'atau WPS Office.',
+          );
+        } finally {
+          if (await file.exists()) await file.delete();
+        }
       case OutboxKind.backup:
         final file = await _makeBackup();
         try {
@@ -574,6 +613,7 @@ final telegramServiceProvider = Provider<TelegramService>((ref) {
     reports: ref.watch(reportServiceProvider),
     makeBackup: () async =>
         (await ref.read(backupServiceProvider.future)).createForTelegram(),
+    makeShiftExcel: (id) => ref.read(shiftExcelProvider).writeFile(id),
   );
   ref.onDispose(service.stop);
   return service;

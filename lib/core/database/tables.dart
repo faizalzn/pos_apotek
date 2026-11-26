@@ -345,6 +345,10 @@ enum OutboxKind {
 
   /// Backup database dibuat saat dikirim; [TelegramOutbox.body] = keterangan.
   backup,
+
+  /// Laporan Excel shift dibuat saat dikirim; [TelegramOutbox.body] = JSON
+  /// `{"shiftId": …, "caption": …}`.
+  shiftExcel,
 }
 
 /// Antrean pesan Telegram yang belum terkirim (mis. saat offline).

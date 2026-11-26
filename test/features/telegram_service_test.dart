@@ -109,6 +109,8 @@ void main() {
       reports: ReportService(db, shifts),
       makeBackup: () async =>
           File('${temp.path}/b.zip')..writeAsStringSync('ZIPDATA'),
+      makeShiftExcel: (id) async =>
+          File('${temp.path}/shift.xlsx')..writeAsStringSync('EXCEL:$id'),
     );
     container = ProviderContainer(
       overrides: [clockProvider.overrideWithValue(clock.call)],
@@ -289,8 +291,21 @@ void main() {
     final text = server.sent.single['text'] as String;
     expect(text, contains('Tutup shift · Dewi'));
     expect(text, contains('Selisih: Kurang Rp500'));
-    expect(server.documents.single, contains('ZIPDATA'));
-    expect(server.documents.single, contains('4242'));
+    // Excel dulu, lalu backup.
+    expect(server.documents, hasLength(2));
+    expect(server.documents.first, contains('EXCEL:${shift.id}'));
+    expect(server.documents.first, contains('Laporan Excel shift Dewi'));
+    expect(server.documents.last, contains('ZIPDATA'));
+    expect(server.documents.last, contains('4242'));
+    expect(File('${temp.path}/shift.xlsx').existsSync(), isFalse);
+
+    // Excel bisa dimatikan sendiri.
+    await telegram.setTopic(TelegramTopic.shiftExcel, false);
+    final next = await shifts.open(by: cashier, openingCash: 54000);
+    await shifts.close(shiftId: next.id, countedCash: 54000, by: cashier);
+    await telegram.flush();
+    expect(server.documents, hasLength(3));
+    expect(server.documents.last, contains('ZIPDATA'));
     expect(
       File('${temp.path}/b.zip').existsSync(),
       isFalse,
@@ -405,6 +420,7 @@ void main() {
       now: clock.call,
       reports: ReportService(db, shifts),
       makeBackup: () async => File('x'),
+      makeShiftExcel: (_) async => File('x'),
     );
     expect(await none.credentials(), isNull);
     await none.flush();
