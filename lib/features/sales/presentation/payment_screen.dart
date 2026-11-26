@@ -6,6 +6,9 @@ import '../../../core/format.dart';
 import '../../../core/widgets/common.dart';
 import '../../auth/application/session_controller.dart';
 import '../../auth/data/user_repository.dart' show UserRuleException;
+import '../../qris/data/qris.dart';
+import '../../qris/data/qris_repository.dart';
+import '../../qris/presentation/qris_widgets.dart';
 import '../application/cart_controller.dart';
 import '../data/sale_service.dart';
 import 'sale_success_screen.dart';
@@ -194,7 +197,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                         ],
                       ),
                     ),
-                  ] else
+                  ] else if (ref.watch(qrisProvider).value case final qris?)
+                    _DynamicQris(qris: qris, total: total)
+                  else
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -222,6 +227,12 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                               'aplikasi bank/merchant, lalu tekan tombol di bawah.',
                               style: theme.textTheme.bodyLarge,
                             ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tip: Pemilik bisa mengatur QRIS dengan nominal '
+                              'otomatis di Pengaturan → QRIS apotek.',
+                              style: theme.textTheme.bodySmall,
+                            ),
                           ],
                         ),
                       ),
@@ -242,6 +253,67 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// QR berisi nominal belanja (QRIS dinamis, ADR-0002).
+class _DynamicQris extends StatelessWidget {
+  const _DynamicQris({required this.qris, required this.total});
+
+  final Qris qris;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final data = total > 0 ? qris.withAmount(total) : null;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(qris.merchantName, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (data != null)
+              InkWell(
+                key: const Key('qris-dynamic'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => QrisFullScreen(
+                      data: data,
+                      amount: total,
+                      merchantName: qris.merchantName,
+                    ),
+                  ),
+                ),
+                child: QrisCode(data: data, size: 220),
+              ),
+            TextButton.icon(
+              onPressed: data == null
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => QrisFullScreen(
+                          data: data,
+                          amount: total,
+                          merchantName: qris.merchantName,
+                        ),
+                      ),
+                    ),
+              icon: const Icon(Icons.fullscreen),
+              label: const Text('Perbesar untuk pelanggan'),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '1. Pelanggan scan QR ini — nominal ${formatRupiah(total)} sudah terisi.\n'
+              '2. Pastikan notifikasi pembayaran sudah masuk di aplikasi '
+              'bank/merchant, lalu tekan tombol di bawah.',
+              style: theme.textTheme.bodyLarge,
             ),
           ],
         ),

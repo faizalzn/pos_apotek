@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../qris/data/qris_repository.dart';
+import '../../qris/presentation/qris_settings_screen.dart';
 import '../../telegram/data/telegram_service.dart';
 import '../../telegram/presentation/telegram_settings_screen.dart';
 import '../../../core/widgets/common.dart';
@@ -157,6 +159,21 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ],
+          if (isOwner)
+            ListTile(
+              leading: const Icon(Icons.qr_code_2_outlined),
+              title: const Text('QRIS apotek'),
+              subtitle: Text(
+                switch (ref.watch(qrisProvider).value) {
+                  final q? => 'Nominal otomatis · ${q.merchantName}',
+                  null => 'Belum diatur · pelanggan mengetik nominal sendiri',
+                },
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const QrisSettingsScreen()),
+              ),
+            ),
           if (isOwner) ...[
             const _Section('Data'),
             ListTile(
@@ -189,7 +206,6 @@ class SettingsScreen extends ConsumerWidget {
           if (isOwner) ...[
             const _Section('Segera hadir'),
             for (final (icon, label) in const [
-              (Icons.qr_code_2_outlined, 'QRIS'),
               (Icons.upload_file_outlined, 'Impor produk dari Excel'),
             ])
               ListTile(enabled: false, leading: Icon(icon), title: Text(label)),

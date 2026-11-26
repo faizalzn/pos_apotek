@@ -4,6 +4,17 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 
 ## [Unreleased]
 
+### Ditambahkan — QRIS dinamis (langkah 7)
+- **Pengaturan → QRIS apotek**:
+  - QRIS apotek bisa didaftarkan dengan scan stiker, dari gambar atau screenshot,
+    atau tempel teks.
+  - QRIS diperiksa dulu sebelum disimpan (format dan checksum).
+  - Ada QR uji Rp1 untuk dicoba sekali dengan aplikasi bank.
+- **Di kasir**, pembayaran QRIS menampilkan QR yang **nominalnya sudah terisi**, dan
+  ada tombol "Perbesar untuk pelanggan". Gratis, tanpa payment gateway. Uang tetap masuk
+  ke rekening QRIS apotek.
+- Bila QRIS belum diatur, kasir tetap memakai stiker QRIS seperti sebelumnya.
+
 ### Ditambahkan
 - **Laporan Excel shift**:
   - Dikirim ke Telegram saat shift ditutup, sebelum file backup. Bisa dimatikan
