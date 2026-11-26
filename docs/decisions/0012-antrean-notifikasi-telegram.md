@@ -41,6 +41,16 @@ terlewat, dan HP kasir belum tentu milik Pemilik.
   - Aplikasi menunggu `/start <kode>` lewat `getUpdates` (long polling) dan menyimpan
     `chat_id`.
 
+- **Token bot diisi Pemilik di aplikasi** (Pengaturan → Notifikasi Telegram)
+  (revisi 2026-11-26, menggantikan sebagian ADR-0003):
+  - Token diperiksa dengan `getMe`, dan username bot diambil otomatis.
+  - Token disimpan di `app_settings` (`telegram.bot_token`).
+  - Token dari `secrets.json` saat build tetap didukung sebagai cadangan. Isian di
+    aplikasi lebih diutamakan.
+  - Mengganti bot memutus sambungan lama dan mengosongkan antrean.
+  - Alasannya: Pemilik atau developer tidak perlu build ulang, dan token tidak
+    tertanam di APK.
+
 ## Alternatif yang ditolak
 
 - **Kirim langsung tanpa antrean:** pesan hilang saat offline.
@@ -53,3 +63,5 @@ terlewat, dan HP kasir belum tentu milik Pemilik.
 - Pesan baru terkirim saat aplikasi terbuka dan ada internet.
 - Bila aplikasi dipulihkan dari backup, pesan yang belum terkirim di backup itu ikut
   terkirim.
+- Token bot ikut tersimpan di file backup. Backup hanya boleh dibagikan ke tempat
+  milik Pemilik. Kalau token bocor, buat token baru dengan `/revoke` di @BotFather.

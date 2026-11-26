@@ -57,6 +57,11 @@ di `secrets.json`. Panduan lengkap: [docs/KODE_DARURAT.md](docs/KODE_DARURAT.md)
 
 ### Membuat bot Telegram (sekali saja)
 
+**Cara termudah, tanpa build ulang:** buka **Pengaturan → Notifikasi Telegram** di
+aplikasi. Ikuti langkah di layar untuk membuat bot di @BotFather, lalu tempel tokennya.
+
+Cara lain: tanam token saat build.
+
 1. Buka [@BotFather](https://t.me/BotFather) di Telegram, kirim `/newbot`, lalu ikuti
    langkahnya. Username bot harus berakhiran `bot`, mis. `apotek_sehat_bot`.
 2. Salin token ke `TELEGRAM_BOT_TOKEN` dan username (tanpa `@`) ke

@@ -20,6 +20,7 @@ Gunakan **A** di Tahap 1. Opsi B dipakai jika memang dibutuhkan (Tahap 3).
 
 - Notifikasi **per transaksi** dan **ringkasan tutup shift**, masing-masing bisa diaktifkan/dimatikan.
 - Token bot **ditanam di aplikasi** (lewat `--dart-define-from-file`, lihat ADR-0008).
+  *Revisi:* token kini juga bisa diisi Pemilik di aplikasi (ADR-0012).
 - Pemilik tidak memasukkan token: tombol "Hubungkan" membuka bot dengan *deep link*
   `t.me/<bot>?start=<kode-unik>`, pemilik menekan Start, aplikasi mencocokkan kode
   lewat `getUpdates` dan menyimpan `chat_id`.

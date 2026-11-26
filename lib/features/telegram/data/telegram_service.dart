@@ -20,6 +20,9 @@ import 'telegram_api.dart';
 import 'telegram_messages.dart';
 
 abstract final class TelegramKeys {
+  /// Token bot yang diisi Pemilik di aplikasi (menggantikan token build).
+  static const botToken = 'telegram.bot_token';
+  static const botUsername = 'telegram.bot_username';
   static const chatId = 'telegram.chat_id';
   static const chatName = 'telegram.chat_name';
   static const notifySale = 'telegram.notify_sale';
@@ -72,24 +75,16 @@ String _ymd(DateTime d) =>
 /// Menulis pesan ke antrean. Dipanggil dari dalam transaksi database
 /// penjualan/shift, sehingga pesan tersimpan bersama datanya.
 class TelegramOutboxWriter implements SaleNotifier, ShiftNotifier {
-  TelegramOutboxWriter(
-    this._db,
-    this._settings,
-    this._now, {
-    required this.enabled,
-  });
+  TelegramOutboxWriter(this._db, this._settings, this._now);
 
   final AppDatabase _db;
   final SettingsRepository _settings;
   final Clock _now;
 
-  /// Token bot tersedia di build ini.
-  final bool enabled;
-
   static const _uuid = Uuid();
 
+  /// Ada akun Telegram yang terhubung (otomatis berarti ada token bot).
   Future<bool> wants(TelegramTopic topic) async {
-    if (!enabled) return false;
     final all = await _settings.getAll();
     return (all[TelegramKeys.chatId] ?? '').isNotEmpty && all[topic.key] != '0';
   }
@@ -135,14 +130,20 @@ class TelegramOutboxWriter implements SaleNotifier, ShiftNotifier {
 class TelegramStatus {
   const TelegramStatus({
     required this.enabled,
+    required this.botUsername,
+    required this.tokenFromBuild,
     required this.chatName,
     required this.pending,
     required this.lastError,
     required this.topics,
   });
 
-  /// Token bot tersedia di build ini.
+  /// Token bot sudah diisi (di aplikasi atau saat build).
   final bool enabled;
+  final String botUsername;
+
+  /// Token berasal dari `secrets.json` saat build (tidak bisa dihapus di sini).
+  final bool tokenFromBuild;
   final String? chatName;
   final int pending;
   final String? lastError;
@@ -158,7 +159,7 @@ class TelegramService {
     required this._settings,
     required this._outbox,
     required this.config,
-    required this._api,
+    required this._apiFactory,
     required this._now,
     required this._reports,
     required this._makeBackup,
@@ -168,12 +169,94 @@ class TelegramService {
   final SettingsRepository _settings;
   final TelegramOutboxWriter _outbox;
   final AppConfig config;
-  final TelegramApi? _api;
+  final TelegramApi Function(String token) _apiFactory;
   final Clock _now;
   final ReportService _reports;
   final Future<File> Function() _makeBackup;
 
-  bool get enabled => _api != null;
+  TelegramApi? _api;
+  String? _apiToken;
+
+  /// Token & username bot: isian Pemilik di aplikasi, atau dari build.
+  Future<({String token, String username, bool fromBuild})?>
+  credentials() async {
+    final all = await _settings.getAll();
+    final token = all[TelegramKeys.botToken] ?? '';
+    if (token.isNotEmpty) {
+      return (
+        token: token,
+        username: all[TelegramKeys.botUsername] ?? '',
+        fromBuild: false,
+      );
+    }
+    if (config.telegramEnabled) {
+      return (
+        token: config.telegramBotToken,
+        username: config.telegramBotUsername,
+        fromBuild: true,
+      );
+    }
+    return null;
+  }
+
+  Future<TelegramApi?> _currentApi() async {
+    final c = await credentials();
+    if (c == null) return null;
+    if (_apiToken != c.token) {
+      _api = _apiFactory(c.token);
+      _apiToken = c.token;
+    }
+    return _api;
+  }
+
+  /// Memeriksa token ke Telegram lalu menyimpannya. Mengembalikan username bot.
+  /// Bila bot berganti, sambungan lama diputus (harus menekan START lagi).
+  Future<String> saveToken(String input) async {
+    final token = input.trim().replaceAll(RegExp(r'\s'), '');
+    if (!RegExp(r'^\d{5,}:[A-Za-z0-9_-]{30,}$').hasMatch(token)) {
+      throw const TelegramException(
+        'Token tidak dikenali. Salin lengkap dari @BotFather, '
+        'bentuknya seperti 123456789:AAH…',
+      );
+    }
+    final String username;
+    try {
+      username = await _apiFactory(token).getMe();
+    } on TelegramException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 404) {
+        throw const TelegramException(
+          'Token ditolak Telegram. Periksa lagi atau buat token baru di @BotFather.',
+        );
+      }
+      rethrow;
+    }
+    final old = await credentials();
+    await _db.transaction(() async {
+      if (old?.token != token) {
+        await _db.delete(_db.telegramOutbox).go();
+        await _settings.setAll({
+          TelegramKeys.chatId: '',
+          TelegramKeys.chatName: '',
+        });
+      }
+      await _settings.setAll({
+        TelegramKeys.botToken: token,
+        TelegramKeys.botUsername: username,
+      });
+    });
+    start();
+    if (!_error.isClosed) _error.add(null);
+    return username;
+  }
+
+  /// Menghapus token isian Pemilik (dan sambungannya).
+  Future<void> removeToken() async {
+    await unlink();
+    await _settings.setAll({
+      TelegramKeys.botToken: '',
+      TelegramKeys.botUsername: '',
+    });
+  }
 
   Timer? _timer;
   StreamSubscription<void>? _sub;
@@ -190,7 +273,7 @@ class TelegramService {
 
   /// Mulai bekerja di latar: kirim antrean saat ada pesan baru & tiap menit.
   void start() {
-    if (!enabled || _timer != null) return;
+    if (_timer != null || _stopped) return;
     _sub = _db
         .tableUpdates(
           TableUpdateQuery.onTable(
@@ -206,7 +289,10 @@ class TelegramService {
     unawaited(tick());
   }
 
+  bool _stopped = false;
+
   Future<void> stop() async {
+    _stopped = true;
     _timer?.cancel();
     _timer = null;
     await _sub?.cancel();
@@ -234,7 +320,7 @@ class TelegramService {
   }
 
   Future<void> _flush() async {
-    final api = _api;
+    final api = await _currentApi();
     if (api == null) return;
     if (_pauseUntil case final until? when _now().isBefore(until)) return;
     final chat = await _chatId();
@@ -363,8 +449,11 @@ class TelegramService {
     return List.generate(12, (_) => chars[r.nextInt(chars.length)]).join();
   }
 
-  Uri linkUri(String code) =>
-      Uri.https('t.me', '/${config.telegramBotUsername}', {'start': code});
+  Future<Uri> linkUri(String code) async => Uri.https(
+    't.me',
+    '/${(await credentials())?.username ?? ''}',
+    {'start': code},
+  );
 
   /// Menunggu Pemilik menekan Start di bot. Mengembalikan nama akun
   /// Telegram, atau `null` bila waktu habis / dibatalkan.
@@ -373,7 +462,7 @@ class TelegramService {
     Duration timeout = const Duration(minutes: 3),
     bool Function()? cancelled,
   }) async {
-    final api = _api!;
+    final api = (await _currentApi())!;
     final end = _now().add(timeout);
     int? offset;
     while (_now().isBefore(end) && !(cancelled?.call() ?? false)) {
@@ -441,8 +530,11 @@ class TelegramService {
           )
           .getSingle();
       final name = all[TelegramKeys.chatName] ?? '';
+      final c = await credentials();
       return TelegramStatus(
-        enabled: enabled,
+        enabled: c != null,
+        botUsername: c?.username ?? '',
+        tokenFromBuild: c?.fromBuild ?? false,
         chatName: (all[TelegramKeys.chatId] ?? '').isEmpty || name.isEmpty
             ? null
             : name,
@@ -467,7 +559,6 @@ final telegramOutboxProvider = Provider<TelegramOutboxWriter>(
     ref.watch(databaseProvider),
     ref.watch(settingsRepositoryProvider),
     ref.watch(clockProvider),
-    enabled: ref.watch(appConfigProvider).telegramEnabled,
   ),
 );
 
@@ -478,7 +569,7 @@ final telegramServiceProvider = Provider<TelegramService>((ref) {
     settings: ref.watch(settingsRepositoryProvider),
     outbox: ref.watch(telegramOutboxProvider),
     config: config,
-    api: config.telegramEnabled ? TelegramApi(config.telegramBotToken) : null,
+    apiFactory: TelegramApi.new,
     now: ref.watch(clockProvider),
     reports: ref.watch(reportServiceProvider),
     makeBackup: () async =>
@@ -492,7 +583,9 @@ final telegramStatusProvider = StreamProvider<TelegramStatus>(
   (ref) => ref.watch(telegramServiceProvider).watchStatus(),
 );
 
-/// Menyalakan pengirim antrean (tidak melakukan apa pun bila token kosong).
-final telegramRunnerProvider = Provider<void>((ref) {
-  ref.watch(telegramServiceProvider).start();
+/// Menyalakan pengirim antrean bila token bot sudah ada. Token yang baru
+/// diisi menyalakannya sendiri lewat [TelegramService.saveToken].
+final telegramRunnerProvider = FutureProvider<void>((ref) async {
+  final service = ref.watch(telegramServiceProvider);
+  if (await service.credentials() != null) service.start();
 });

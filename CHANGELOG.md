@@ -4,6 +4,14 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 
 ## [Unreleased]
 
+### Ditambahkan
+- **Token bot Telegram bisa diisi di aplikasi** (Pengaturan → Notifikasi Telegram):
+  - Ada panduan langkah demi langkah membuat bot di @BotFather.
+  - Ada tombol tempel.
+  - Token diperiksa langsung ke Telegram, dan username bot terisi otomatis.
+  - Bot bisa diganti atau dihapus.
+  - Tidak perlu `secrets.json` atau build ulang.
+
 ### Ditambahkan — Notifikasi Telegram (langkah 6)
 - Dikirim ke Telegram Pemilik:
   - Setiap transaksi (barang, total, cara bayar)
