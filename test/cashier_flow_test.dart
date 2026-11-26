@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:pos_apotek/app.dart';
 import 'package:pos_apotek/core/clock.dart';
 import 'package:pos_apotek/core/database/app_database.dart';
@@ -14,10 +15,13 @@ import 'package:pos_apotek/features/auth/data/user_repository.dart';
 import 'package:pos_apotek/features/products/data/photo_store.dart';
 import 'package:pos_apotek/features/products/data/product_models.dart';
 import 'package:pos_apotek/features/products/data/product_repository.dart';
+import 'package:pos_apotek/features/qris/data/qris.dart';
+import 'package:pos_apotek/features/qris/data/qris_repository.dart';
 import 'package:pos_apotek/features/sales/presentation/payment_screen.dart';
 import 'package:pos_apotek/features/settings/data/settings_repository.dart';
 import 'package:pos_apotek/features/setup/data/setup_service.dart';
 
+import 'features/qris_test.dart' show sampleStatic;
 import 'helpers.dart';
 
 void main() {
@@ -348,6 +352,55 @@ void main() {
     await tapOn(tester, save);
     expect(find.textContaining('Token tidak dikenali'), findsOneWidget);
     await finish(tester);
+  });
+
+  testWidgets('QRIS apotek: diatur Pemilik, kasir menampilkan QR bernominal', (
+    tester,
+  ) async {
+    await login(tester, 'Sari', '482915');
+    await tapOn(tester, find.text('Pengaturan'));
+    expect(
+      find.text('Belum diatur · pelanggan mengetik nominal sendiri'),
+      findsOneWidget,
+    );
+    await tapOn(tester, find.text('QRIS apotek'));
+    expect(find.text('QRIS dengan nominal otomatis'), findsOneWidget);
+
+    // (Scan stiker diwakili penyimpanan langsung; kamera tidak ada di tes.)
+    await tester.runAsync(
+      () => QrisRepository(db, SettingsRepository(db, clock.call)).save(sampleStatic()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('APOTEK CONTOH'), findsOneWidget);
+    expect(find.byType(QrImageView), findsOneWidget); // QR uji Rp1
+    await tapOn(tester, find.byType(BackButton));
+    expect(find.text('Nominal otomatis · APOTEK CONTOH'), findsOneWidget);
+    await tapOn(tester, find.byType(BackButton));
+
+    await tapOn(tester, find.text('Kasir'));
+    await openShift(tester, '0');
+    await tapOn(tester, find.text('Amoxicillin'));
+    await tapOn(tester, find.byKey(const Key('open-cart')));
+    await tapOn(tester, find.byKey(const Key('pay')));
+    await tapOn(tester, find.text('QRIS'));
+
+    expect(find.byKey(const Key('qris-dynamic')), findsOneWidget);
+    expect(find.textContaining('nominal Rp1.200 sudah terisi'), findsOneWidget);
+
+    // Layar penuh untuk pelanggan
+    await tapOn(tester, find.text('Perbesar untuk pelanggan'));
+    expect(find.text('Scan untuk membayar'), findsOneWidget);
+    expect(find.text('Rp1.200'), findsOneWidget);
+    await tapOn(tester, find.byType(BackButton));
+
+    await tapOn(tester, find.text('Pembayaran sudah masuk'));
+    expect(find.text('Transaksi berhasil'), findsOneWidget);
+    await finish(tester);
+  });
+
+  test('QR yang ditampilkan berisi nominal belanja', () {
+    final q = Qris.parse(sampleStatic());
+    expect(Qris.parse(q.withAmount(1200)).amount, 1200);
   });
 
   test('pilihan uang cepat', () {

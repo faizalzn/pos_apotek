@@ -18,6 +18,32 @@ lalu membuat QRIS dinamis secara offline:
 2. Menyisipkan nominal transaksi (tag `54`).
 3. Menghitung ulang checksum CRC16-CCITT (tag `63`).
 
+### Implementasi (2026-11-26)
+
+- **Sumber QRIS apotek** (Pengaturan → QRIS apotek, khusus Pemilik):
+  - scan stiker dengan kamera,
+  - ambil dari gambar atau screenshot QRIS, atau
+  - tempel teks QRIS.
+- **Pemeriksaan saat disimpan:**
+  - Diawali `000201`.
+  - Format TLV benar.
+  - CRC tag `63` cocok.
+  - Ada merchant `ID.CO.QRIS` di tag 26–51.
+  - Negara `ID` dan mata uang `360`.
+- **Disimpan** sebagai pengaturan `qris.payload`. Ini data privat yang tidak boleh
+  masuk repo (ADR-0008), tapi ikut masuk backup.
+- **Membuat QR bernominal:**
+  - Tag `54` disisipkan sesuai urutan tag.
+  - Tag tip `55`–`57` dibuang, supaya pelanggan tidak diminta tip.
+  - CRC16-CCITT-FALSE dihitung ulang.
+  - QR dinamis pun bisa dipakai sebagai sumber (nominalnya diganti).
+- **Uji coba Rp1** ditampilkan di layar pengaturan. Pemilik wajib men-scan sekali
+  dengan aplikasi bank sebelum dipakai.
+- **Di kasir:** QR bernominal tampil di layar pembayaran, plus tampilan layar penuh
+  untuk pelanggan. Bila QRIS belum diatur, alur lama (stiker) tetap dipakai.
+- **Verifikasi:** CRC dicek dengan vektor standar (`123456789` → `29B1`) dan
+  `binascii.crc_hqx`. QR yang dirender juga sudah dibaca ulang dengan ZXing.
+
 ## Konsekuensi
 
 - Gratis, tanpa pihak ketiga, tanpa pendaftaran tambahan. MDR resmi dari penerbit QRIS tetap berlaku.
