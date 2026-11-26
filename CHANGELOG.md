@@ -5,6 +5,21 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 ## [Unreleased]
 
 ### Ditambahkan
+- **Laporan Excel shift**:
+  - Dikirim ke Telegram saat shift ditutup, sebelum file backup. Bisa dimatikan
+    sendiri.
+  - Bisa juga dibagikan dari detail shift (khusus Pemilik).
+  - Isinya 6 lembar:
+    - Ringkasan kas
+    - Transaksi (dengan HPP & laba)
+    - Rincian barang
+    - Rekap produk
+    - Kas masuk/keluar
+    - Stok semua produk saat itu
+  - Angka & tanggal berupa nilai asli, jadi bisa dijumlah atau difilter di Excel,
+    Google Sheets, atau WPS.
+
+### Ditambahkan
 - **Token bot Telegram bisa diisi di aplikasi** (Pengaturan → Notifikasi Telegram):
   - Ada panduan langkah demi langkah membuat bot di @BotFather.
   - Ada tombol tempel.
