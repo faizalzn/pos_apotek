@@ -4,6 +4,22 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 
 ## [Unreleased]
 
+### Ditambahkan — Notifikasi Telegram (langkah 6)
+- Dikirim ke Telegram Pemilik:
+  - Setiap transaksi (barang, total, cara bayar)
+  - Pembatalan (siapa dan alasannya)
+  - Tutup shift (selisih kas)
+  - Ringkasan harian (omzet, laba, terlaris, shift)
+  - File backup setelah tutup shift
+- Peringatan saat produk baru menipis atau habis ikut di pesan transaksi.
+- Saat offline, pesan disimpan dan dikirim otomatis saat internet kembali, termasuk
+  setelah aplikasi ditutup. Urutan pesan tetap.
+- Menghubungkan cukup dengan tombol, tanpa mengetik token. Tautannya bisa dikirim ke
+  HP Pemilik bila aplikasi dipakai di HP kasir.
+- Setiap jenis notifikasi bisa dimatikan, ada pesan uji, dan ringkasan hari ini bisa
+  dikirim kapan saja.
+- Database versi 5 (`telegram_outbox`).
+
 ### Diperbaiki (masukan uji coba)
 - **Struk sebagai gambar** tidak lagi hitam: latar transparan diganti putih.
 - **Stok menipis**:

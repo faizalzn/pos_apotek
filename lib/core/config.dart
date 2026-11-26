@@ -6,12 +6,17 @@ class AppConfig {
   const AppConfig({
     this.rescuePublicKey = '',
     this.developerWhatsApp = '',
+    this.telegramBotToken = '',
+    this.telegramBotUsername = '',
   });
 
   const AppConfig.fromEnvironment()
       : rescuePublicKey = const String.fromEnvironment('RESCUE_PUBLIC_KEY'),
         developerWhatsApp =
-            const String.fromEnvironment('DEVELOPER_WHATSAPP');
+            const String.fromEnvironment('DEVELOPER_WHATSAPP'),
+        telegramBotToken = const String.fromEnvironment('TELEGRAM_BOT_TOKEN'),
+        telegramBotUsername =
+            const String.fromEnvironment('TELEGRAM_BOT_USERNAME');
 
   /// Kunci publik Ed25519 (base64) untuk memeriksa kode darurat developer.
   final String rescuePublicKey;
@@ -20,7 +25,16 @@ class AppConfig {
   /// mis. `6281234567890`.
   final String developerWhatsApp;
 
+  /// Token bot Telegram dari @BotFather (ADR-0003).
+  final String telegramBotToken;
+
+  /// Username bot tanpa `@`, untuk tautan `t.me/<bot>?start=…`.
+  final String telegramBotUsername;
+
   bool get rescueEnabled => rescuePublicKey.isNotEmpty;
+
+  bool get telegramEnabled =>
+      telegramBotToken.isNotEmpty && telegramBotUsername.isNotEmpty;
 
   /// Nomor WhatsApp yang sudah dibersihkan dari spasi, `+`, dan `-`;
   /// awalan `0` diganti `62`.

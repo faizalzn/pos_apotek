@@ -16,3 +16,4 @@ Keputusan yang diganti tidak dihapus — statusnya diubah menjadi "Digantikan ol
 | [0009](0009-kode-darurat-developer.md) | Kode darurat developer (Ed25519) | Diterima |
 | [0010](0010-backup-zip-lokal.md) | Backup .zip disimpan pengguna di luar HP | Diterima |
 | [0011](0011-shift-dan-kas-laci.md) | Shift & rekonsiliasi kas laci | Diterima |
+| [0012](0012-antrean-notifikasi-telegram.md) | Antrean notifikasi Telegram (outbox) | Diterima |

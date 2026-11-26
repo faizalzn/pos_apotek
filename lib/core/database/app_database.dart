@@ -22,6 +22,7 @@ part 'app_database.g.dart';
     SaleItems,
     Shifts,
     CashEntries,
+    TelegramOutbox,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -30,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'pos_apotek'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   Future<void>? _closing;
 
@@ -67,6 +68,9 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(schema.cashEntries);
         await m.addColumn(schema.sales, schema.sales.shiftId);
         await _createIndexes(version: 4);
+      },
+      from4To5: (m, schema) async {
+        await m.createTable(schema.telegramOutbox);
       },
     ),
     beforeOpen: (details) async {

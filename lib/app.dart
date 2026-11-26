@@ -7,6 +7,7 @@ import 'features/auth/application/session_controller.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/home/presentation/home_screen.dart';
 import 'features/settings/data/settings_repository.dart';
+import 'features/telegram/data/telegram_service.dart';
 import 'features/setup/presentation/setup_wizard_screen.dart';
 
 final _navigatorKey = GlobalKey<NavigatorState>();
@@ -16,6 +17,8 @@ class PosApotekApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Pengirim notifikasi Telegram berjalan selama aplikasi terbuka.
+    ref.watch(telegramRunnerProvider);
     // Saat keluar (logout), tutup semua layar yang sedang terbuka.
     ref.listen<AppUser?>(sessionProvider, (previous, next) {
       if (next == null) {

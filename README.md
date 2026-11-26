@@ -57,10 +57,19 @@ di `secrets.json`. Panduan lengkap: [docs/KODE_DARURAT.md](docs/KODE_DARURAT.md)
 
 ### Membuat bot Telegram (sekali saja)
 
-1. Buka [@BotFather](https://t.me/BotFather) di Telegram, kirim `/newbot`, ikuti langkahnya.
-2. Salin token & username bot ke `secrets.json`.
+1. Buka [@BotFather](https://t.me/BotFather) di Telegram, kirim `/newbot`, lalu ikuti
+   langkahnya. Username bot harus berakhiran `bot`, mis. `apotek_sehat_bot`.
+2. Salin token ke `TELEGRAM_BOT_TOKEN` dan username (tanpa `@`) ke
+   `TELEGRAM_BOT_USERNAME` di `secrets.json`.
+3. Build atau jalankan dengan `--dart-define-from-file=secrets.json`, mis.
+   `flutter run --dart-define-from-file=secrets.json`.
 
-Pemilik apotek **tidak perlu** menyentuh token — cukup tekan tombol "Hubungkan" di aplikasi.
+Pemilik apotek **tidak perlu** menyentuh token. Cukup buka **Pengaturan → Notifikasi
+Telegram → Hubungkan Telegram**, lalu tekan START di Telegram. Kalau aplikasi dipakai
+di HP kasir, pilih **Kirim tautan ke HP Pemilik**.
+
+> Jangan pernah membagikan token bot. Siapa pun yang memegangnya bisa mengirim pesan
+> atas nama bot. Kalau token bocor, buat token baru lewat `/revoke` di @BotFather.
 
 ### Pengujian
 
