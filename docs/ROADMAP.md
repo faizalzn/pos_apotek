@@ -13,8 +13,8 @@ Urutan pengerjaan:
    Android, PDF/gambar, WhatsApp, logo apotek
 5. ✅ **Shift & laporan** — buka/tutup shift, kas masuk/keluar, selisih kas, laporan
    omzet/laba, per hari, obat terlaris, per kasir, per shift
-6. **Notifikasi Telegram** — setiap transaksi & pembatalan (antrean offline), ringkasan
-   tutup shift & harian, kirim backup otomatis
+6. ✅ **Notifikasi Telegram** — setiap transaksi & pembatalan (antrean offline), ringkasan
+   tutup shift & harian, kirim backup otomatis, peringatan stok
 7. **QRIS dinamis** — scan QRIS statis merchant, sisipkan nominal
 8. **Impor** — impor Excel/CSV dengan pemetaan kolom
 9. Printer thermal **USB (OTG)** — bila nanti printer yang dipakai berjenis USB

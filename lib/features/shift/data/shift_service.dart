@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/clock.dart';
 import '../../../core/database/app_database.dart';
+import '../../telegram/data/telegram_service.dart' show telegramOutboxProvider;
 import '../../auth/data/user_repository.dart' show UserRuleException;
 
 /// Kas masuk/keluar beserta nama pencatatnya.
@@ -67,11 +68,18 @@ class ShiftSummary {
       shift.countedCash == null ? null : shift.countedCash! - expectedCash;
 }
 
+/// Penerima kabar tutup shift (mis. notifikasi Telegram), dipanggil di dalam
+/// transaksi database.
+abstract interface class ShiftNotifier {
+  Future<void> shiftClosed(ShiftSummary summary);
+}
+
 class ShiftService {
-  ShiftService(this._db, this._now);
+  ShiftService(this._db, this._now, {this.notifier});
 
   final AppDatabase _db;
   final Clock _now;
+  final ShiftNotifier? notifier;
 
   static const _uuid = Uuid();
 
@@ -196,6 +204,7 @@ class ShiftService {
           updatedAt: Value(now),
         ),
       );
+      if (notifier case final n?) await n.shiftClosed(await summary(shiftId));
     });
     return summary(shiftId);
   }
@@ -319,7 +328,11 @@ class ShiftService {
 }
 
 final shiftServiceProvider = Provider<ShiftService>(
-  (ref) => ShiftService(ref.watch(databaseProvider), ref.watch(clockProvider)),
+  (ref) => ShiftService(
+    ref.watch(databaseProvider),
+    ref.watch(clockProvider),
+    notifier: ref.watch(telegramOutboxProvider),
+  ),
 );
 
 final openShiftProvider = StreamProvider<Shift?>(

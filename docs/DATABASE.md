@@ -10,7 +10,7 @@ Konvensi (ADR-0001):
 - Setiap tabel memiliki `updated_at`.
 - Tanggal disimpan sebagai teks **ISO-8601** (lihat `build.yaml`).
 
-Versi skema saat ini: **4**.
+Versi skema saat ini: **5**.
 
 ## Diagram
 
@@ -175,6 +175,14 @@ erDiagram
 - Pembatalan (`voidSale`, hanya Pemilik, alasan wajib) mengembalikan stok ke **batch
   asal** lewat gerakan `saleVoid`; transaksi tetap ada dengan status `voided`.
 
+### Antrean Telegram (ADR-0012)
+
+`telegram_outbox(id, kind text|backup, body, attempts, last_error, created_at)`.
+
+- Diisi di dalam transaksi penjualan, pembatalan, dan tutup shift.
+- Dihapus setelah terkirim.
+- Tidak berelasi dengan tabel lain.
+
 ### Aturan shift (ADR-0011)
 
 - Paling banyak **satu shift terbuka**. Transaksi hanya bisa disimpan bila ada shift
@@ -230,3 +238,4 @@ migrasi, agar data yang sudah ada di HP tidak hilang. Alurnya:
 | 2 | `products`, `product_units`, `batches`, `stock_movements` + indeks |
 | 3 | `sales`, `sale_items`; `products.near_expiry_days`; `stock_movements.sale_id` |
 | 4 | `shifts`, `cash_entries`; `sales.shift_id` |
+| 5 | `telegram_outbox` (antrean notifikasi, ADR-0012) |

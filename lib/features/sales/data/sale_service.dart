@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../telegram/data/telegram_messages.dart' show StockNote;
+import '../../telegram/data/telegram_service.dart' show telegramOutboxProvider;
 import '../../../core/clock.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/format.dart';
@@ -31,12 +33,20 @@ class SaleDetail {
   final String? voidedByName;
 }
 
+/// Penerima kabar penjualan (mis. notifikasi Telegram). Dipanggil di dalam
+/// transaksi database, sehingga pesan tersimpan bersama datanya.
+abstract interface class SaleNotifier {
+  Future<void> saleCompleted(SaleDetail detail, List<StockNote> stock);
+  Future<void> saleVoided(SaleDetail detail);
+}
+
 class SaleService {
-  SaleService(this._db, this._products, this._now);
+  SaleService(this._db, this._products, this._now, {this.notifier});
 
   final AppDatabase _db;
   final ProductRepository _products;
   final Clock _now;
+  final SaleNotifier? notifier;
 
   static const _uuid = Uuid();
 
@@ -155,9 +165,13 @@ class SaleService {
       await (_db.update(_db.sales)..where((s) => s.id.equals(saleId))).write(
         SalesCompanion(costTotal: Value(costTotal)),
       );
-      return (_db.select(
+      final sale = await (_db.select(
         _db.sales,
       )..where((s) => s.id.equals(saleId))).getSingle();
+      if (notifier case final n?) {
+        await n.saleCompleted(await _detailOf(sale), await _stockNotes(cart));
+      }
+      return sale;
     });
   }
 
@@ -228,7 +242,41 @@ class SaleService {
           updatedAt: Value(now),
         ),
       );
+      if (notifier case final n?) {
+        final voided = await (_db.select(
+          _db.sales,
+        )..where((s) => s.id.equals(saleId))).getSingle();
+        await n.saleVoided(await _detailOf(voided));
+      }
     });
+  }
+
+  /// Produk yang baru saja menjadi menipis/habis karena transaksi ini.
+  Future<List<StockNote>> _stockNotes(Cart cart) async {
+    final sold = <String, int>{};
+    for (final l in cart.lines) {
+      sold[l.productId] = (sold[l.productId] ?? 0) + l.baseQuantity;
+    }
+    final notes = <StockNote>[];
+    for (final MapEntry(key: id, value: qty) in sold.entries) {
+      final p = await _products.getOne(id);
+      if (p == null) continue;
+      final after = p.stock;
+      final before = after + qty;
+      final limit = p.lowStockThreshold;
+      if (after <= 0) {
+        notes.add(StockNote(name: p.product.name, stockText: 'habis', out: true));
+      } else if (after <= limit && before > limit) {
+        notes.add(
+          StockNote(
+            name: p.product.name,
+            stockText: formatStock(after, p.units),
+            out: false,
+          ),
+        );
+      }
+    }
+    return notes;
   }
 
   /// Transaksi pada tanggal [day] (waktu setempat), terbaru lebih dulu.
@@ -310,6 +358,7 @@ final saleServiceProvider = Provider<SaleService>(
     ref.watch(databaseProvider),
     ref.watch(productRepositoryProvider),
     ref.watch(clockProvider),
+    notifier: ref.watch(telegramOutboxProvider),
   ),
 );
 

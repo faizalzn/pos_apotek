@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../telegram/data/telegram_service.dart';
+import '../../telegram/presentation/telegram_settings_screen.dart';
 import '../../../core/widgets/common.dart';
 import '../../../core/widgets/recovery_code_view.dart';
 import '../../auth/application/session_controller.dart';
@@ -128,7 +130,30 @@ class SettingsScreen extends ConsumerWidget {
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const PrinterSettingsScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const PrinterSettingsScreen(),
+                ),
+              ),
+            ),
+          ],
+          if (isOwner) ...[
+            ListTile(
+              leading: const Icon(Icons.send_outlined),
+              title: const Text('Notifikasi Telegram'),
+              subtitle: Text(switch (ref.watch(telegramStatusProvider).value) {
+                TelegramStatus(enabled: false) => 'Belum disiapkan',
+                TelegramStatus(linked: true, :final chatName, :final pending) =>
+                  pending == 0
+                      ? 'Terhubung ke $chatName'
+                      : 'Terhubung · $pending pesan menunggu',
+                TelegramStatus() => 'Belum terhubung',
+                null => '',
+              }),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const TelegramSettingsScreen(),
+                ),
               ),
             ),
           ],
@@ -137,7 +162,9 @@ class SettingsScreen extends ConsumerWidget {
             ListTile(
               leading: const Icon(Icons.backup_outlined),
               title: const Text('Backup & pulihkan'),
-              subtitle: const Text('Simpan data ke Drive/WhatsApp, pulihkan dari backup'),
+              subtitle: const Text(
+                'Simpan data ke Drive/WhatsApp, pulihkan dari backup',
+              ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
@@ -163,7 +190,6 @@ class SettingsScreen extends ConsumerWidget {
             const _Section('Segera hadir'),
             for (final (icon, label) in const [
               (Icons.qr_code_2_outlined, 'QRIS'),
-              (Icons.send_outlined, 'Notifikasi Telegram'),
               (Icons.upload_file_outlined, 'Impor produk dari Excel'),
             ])
               ListTile(enabled: false, leading: Icon(icon), title: Text(label)),

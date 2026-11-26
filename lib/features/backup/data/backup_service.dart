@@ -147,6 +147,17 @@ class BackupService {
     return file;
   }
 
+  /// Backup tanpa foto untuk dikirim ke Telegram (kecil, < 50 MB).
+  Future<File> createForTelegram() async {
+    final now = _now();
+    final name = 'backup_${_slug(await _storeName())}_${_stamp(now)}.zip';
+    final file = File('${paths.temp.path}/telegram/$name');
+    final dir = file.parent;
+    if (await dir.exists()) await dir.delete(recursive: true);
+    await _writeBackup(file, includePhotos: false, now: now);
+    return file;
+  }
+
   /// Cadangan harian otomatis (tanpa foto — foto tidak berubah oleh salah
   /// input). Tidak melakukan apa pun bila cadangan terakhir < 20 jam lalu.
   Future<File?> runDailyBackupIfDue() async {

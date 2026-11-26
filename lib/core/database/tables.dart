@@ -338,3 +338,25 @@ class CashEntries extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+enum OutboxKind {
+  /// Pesan teks (HTML Telegram) di [TelegramOutbox.body].
+  text,
+
+  /// Backup database dibuat saat dikirim; [TelegramOutbox.body] = keterangan.
+  backup,
+}
+
+/// Antrean pesan Telegram yang belum terkirim (mis. saat offline).
+/// Baris dihapus setelah berhasil terkirim. Lihat ADR-0012.
+class TelegramOutbox extends Table {
+  TextColumn get id => text()();
+  TextColumn get kind => textEnum<OutboxKind>()();
+  TextColumn get body => text()();
+  IntColumn get attempts => integer().withDefault(const Constant(0))();
+  TextColumn get lastError => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

@@ -6451,6 +6451,419 @@ class CashEntriesCompanion extends UpdateCompanion<CashEntry> {
   }
 }
 
+class $TelegramOutboxTable extends TelegramOutbox
+    with TableInfo<$TelegramOutboxTable, TelegramOutboxData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TelegramOutboxTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<OutboxKind, String> kind =
+      GeneratedColumn<String>(
+        'kind',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<OutboxKind>($TelegramOutboxTable.$converterkind);
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _attemptsMeta = const VerificationMeta(
+    'attempts',
+  );
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+    'attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    kind,
+    body,
+    attempts,
+    lastError,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'telegram_outbox';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TelegramOutboxData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(
+        _attemptsMeta,
+        attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TelegramOutboxData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TelegramOutboxData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      kind: $TelegramOutboxTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}kind'],
+        )!,
+      ),
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      )!,
+      attempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempts'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TelegramOutboxTable createAlias(String alias) {
+    return $TelegramOutboxTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<OutboxKind, String, String> $converterkind =
+      const EnumNameConverter<OutboxKind>(OutboxKind.values);
+}
+
+class TelegramOutboxData extends DataClass
+    implements Insertable<TelegramOutboxData> {
+  final String id;
+  final OutboxKind kind;
+  final String body;
+  final int attempts;
+  final String? lastError;
+  final DateTime createdAt;
+  const TelegramOutboxData({
+    required this.id,
+    required this.kind,
+    required this.body,
+    required this.attempts,
+    this.lastError,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    {
+      map['kind'] = Variable<String>(
+        $TelegramOutboxTable.$converterkind.toSql(kind),
+      );
+    }
+    map['body'] = Variable<String>(body);
+    map['attempts'] = Variable<int>(attempts);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  TelegramOutboxCompanion toCompanion(bool nullToAbsent) {
+    return TelegramOutboxCompanion(
+      id: Value(id),
+      kind: Value(kind),
+      body: Value(body),
+      attempts: Value(attempts),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TelegramOutboxData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TelegramOutboxData(
+      id: serializer.fromJson<String>(json['id']),
+      kind: $TelegramOutboxTable.$converterkind.fromJson(
+        serializer.fromJson<String>(json['kind']),
+      ),
+      body: serializer.fromJson<String>(json['body']),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'kind': serializer.toJson<String>(
+        $TelegramOutboxTable.$converterkind.toJson(kind),
+      ),
+      'body': serializer.toJson<String>(body),
+      'attempts': serializer.toJson<int>(attempts),
+      'lastError': serializer.toJson<String?>(lastError),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  TelegramOutboxData copyWith({
+    String? id,
+    OutboxKind? kind,
+    String? body,
+    int? attempts,
+    Value<String?> lastError = const Value.absent(),
+    DateTime? createdAt,
+  }) => TelegramOutboxData(
+    id: id ?? this.id,
+    kind: kind ?? this.kind,
+    body: body ?? this.body,
+    attempts: attempts ?? this.attempts,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  TelegramOutboxData copyWithCompanion(TelegramOutboxCompanion data) {
+    return TelegramOutboxData(
+      id: data.id.present ? data.id.value : this.id,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      body: data.body.present ? data.body.value : this.body,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TelegramOutboxData(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('body: $body, ')
+          ..write('attempts: $attempts, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, kind, body, attempts, lastError, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TelegramOutboxData &&
+          other.id == this.id &&
+          other.kind == this.kind &&
+          other.body == this.body &&
+          other.attempts == this.attempts &&
+          other.lastError == this.lastError &&
+          other.createdAt == this.createdAt);
+}
+
+class TelegramOutboxCompanion extends UpdateCompanion<TelegramOutboxData> {
+  final Value<String> id;
+  final Value<OutboxKind> kind;
+  final Value<String> body;
+  final Value<int> attempts;
+  final Value<String?> lastError;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const TelegramOutboxCompanion({
+    this.id = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.body = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TelegramOutboxCompanion.insert({
+    required String id,
+    required OutboxKind kind,
+    required String body,
+    this.attempts = const Value.absent(),
+    this.lastError = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       kind = Value(kind),
+       body = Value(body),
+       createdAt = Value(createdAt);
+  static Insertable<TelegramOutboxData> custom({
+    Expression<String>? id,
+    Expression<String>? kind,
+    Expression<String>? body,
+    Expression<int>? attempts,
+    Expression<String>? lastError,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (kind != null) 'kind': kind,
+      if (body != null) 'body': body,
+      if (attempts != null) 'attempts': attempts,
+      if (lastError != null) 'last_error': lastError,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TelegramOutboxCompanion copyWith({
+    Value<String>? id,
+    Value<OutboxKind>? kind,
+    Value<String>? body,
+    Value<int>? attempts,
+    Value<String?>? lastError,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return TelegramOutboxCompanion(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      body: body ?? this.body,
+      attempts: attempts ?? this.attempts,
+      lastError: lastError ?? this.lastError,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(
+        $TelegramOutboxTable.$converterkind.toSql(kind.value),
+      );
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TelegramOutboxCompanion(')
+          ..write('id: $id, ')
+          ..write('kind: $kind, ')
+          ..write('body: $body, ')
+          ..write('attempts: $attempts, ')
+          ..write('lastError: $lastError, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6464,6 +6877,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StockMovementsTable stockMovements = $StockMovementsTable(this);
   late final $SaleItemsTable saleItems = $SaleItemsTable(this);
   late final $CashEntriesTable cashEntries = $CashEntriesTable(this);
+  late final $TelegramOutboxTable telegramOutbox = $TelegramOutboxTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6479,6 +6893,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     stockMovements,
     saleItems,
     cashEntries,
+    telegramOutbox,
   ];
   @override
   DriftDatabaseOptions get options =>
@@ -12120,6 +12535,241 @@ typedef $$CashEntriesTableProcessedTableManager =
       CashEntry,
       PrefetchHooks Function({bool shiftId, bool userId})
     >;
+typedef $$TelegramOutboxTableCreateCompanionBuilder =
+    TelegramOutboxCompanion Function({
+      required String id,
+      required OutboxKind kind,
+      required String body,
+      Value<int> attempts,
+      Value<String?> lastError,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$TelegramOutboxTableUpdateCompanionBuilder =
+    TelegramOutboxCompanion Function({
+      Value<String> id,
+      Value<OutboxKind> kind,
+      Value<String> body,
+      Value<int> attempts,
+      Value<String?> lastError,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$TelegramOutboxTableFilterComposer
+    extends Composer<_$AppDatabase, $TelegramOutboxTable> {
+  $$TelegramOutboxTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<OutboxKind, OutboxKind, String> get kind =>
+      $composableBuilder(
+        column: $table.kind,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TelegramOutboxTableOrderingComposer
+    extends Composer<_$AppDatabase, $TelegramOutboxTable> {
+  $$TelegramOutboxTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TelegramOutboxTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TelegramOutboxTable> {
+  $$TelegramOutboxTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<OutboxKind, String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$TelegramOutboxTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TelegramOutboxTable,
+          TelegramOutboxData,
+          $$TelegramOutboxTableFilterComposer,
+          $$TelegramOutboxTableOrderingComposer,
+          $$TelegramOutboxTableAnnotationComposer,
+          $$TelegramOutboxTableCreateCompanionBuilder,
+          $$TelegramOutboxTableUpdateCompanionBuilder,
+          (
+            TelegramOutboxData,
+            BaseReferences<
+              _$AppDatabase,
+              $TelegramOutboxTable,
+              TelegramOutboxData
+            >,
+          ),
+          TelegramOutboxData,
+          PrefetchHooks Function()
+        > {
+  $$TelegramOutboxTableTableManager(
+    _$AppDatabase db,
+    $TelegramOutboxTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TelegramOutboxTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TelegramOutboxTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TelegramOutboxTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<OutboxKind> kind = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TelegramOutboxCompanion(
+                id: id,
+                kind: kind,
+                body: body,
+                attempts: attempts,
+                lastError: lastError,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required OutboxKind kind,
+                required String body,
+                Value<int> attempts = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TelegramOutboxCompanion.insert(
+                id: id,
+                kind: kind,
+                body: body,
+                attempts: attempts,
+                lastError: lastError,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TelegramOutboxTable, TelegramOutboxData>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $TelegramOutboxTable,
+                    TelegramOutboxData
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TelegramOutboxTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TelegramOutboxTable,
+      TelegramOutboxData,
+      $$TelegramOutboxTableFilterComposer,
+      $$TelegramOutboxTableOrderingComposer,
+      $$TelegramOutboxTableAnnotationComposer,
+      $$TelegramOutboxTableCreateCompanionBuilder,
+      $$TelegramOutboxTableUpdateCompanionBuilder,
+      (
+        TelegramOutboxData,
+        BaseReferences<_$AppDatabase, $TelegramOutboxTable, TelegramOutboxData>,
+      ),
+      TelegramOutboxData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12144,4 +12794,6 @@ class $AppDatabaseManager {
       $$SaleItemsTableTableManager(_db, _db.saleItems);
   $$CashEntriesTableTableManager get cashEntries =>
       $$CashEntriesTableTableManager(_db, _db.cashEntries);
+  $$TelegramOutboxTableTableManager get telegramOutbox =>
+      $$TelegramOutboxTableTableManager(_db, _db.telegramOutbox);
 }
